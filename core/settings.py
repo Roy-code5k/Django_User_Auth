@@ -142,6 +142,18 @@ AWS_S3_CUSTOM_DOMAIN = 'tyeszjpfmtmftibxibwj.supabase.co/storage/v1/object/publi
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+        # "OPTIONS": {
+        #     "access_key": SUPABASE_ACCESS_KEY_ID,
+        #     "secret_key": SUPABASE_SECRET_ACCESS_KEY,
+        #     "bucket_name": SUPABASE_STORAGE_BUCKET_NAME,
+        #     "endpoint_url": SUPABASE_S3_ENDPOINT_URL,
+        #     "region_name": SUPABASE_S3_REGION_NAME,
+        #     "file_overwrite": SUPABASE_S3_FILE_OVERWRITE,
+        #     "default_acl": SUPABASE_DEFAULT_ACL,
+        #     "querystring_auth": SUPABASE_QUERYSTRING_AUTH,
+        #     "addressing_style": SUPABASE_S3_ADDRESSING_STYLE,
+        #     "custom_domain": SUPABASE_S3_CUSTOM_DOMAIN,
+        # },
     },
     "staticfiles": {
         "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
