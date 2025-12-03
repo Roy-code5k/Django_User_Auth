@@ -8,7 +8,7 @@ Follow these steps to set up and run the project locally.
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/Ayush-Patel-56/User-Auth.git
+git clone https://github.com/Roy-code5k/Django_User_Auth.git
 cd User-Auth
 ```
 
