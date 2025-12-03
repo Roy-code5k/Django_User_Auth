@@ -1,0 +1,183 @@
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800;900&display=swap');
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #05181C;
+            color: white;
+            overflow-x: hidden;
+            /* Prevent scrollbars from particles */
+            margin: 0;
+        }
+
+        /* Deep ocean gradient background */
+        .bg-fluid {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -2;
+            /* Deepest layer */
+            overflow: hidden;
+            background: radial-gradient(circle at 20% 50%, #0d4a55 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, #0a353c 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, #06252b 0%, transparent 50%);
+            background-color: #021114;
+            transition: transform 0.25s ease-out;
+            /* Smooth parallax */
+        }
+
+        /* Canvas for floating particles */
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            /* Between gradient and content */
+            pointer-events: none;
+        }
+
+        .glass-card {
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        /* New logo styling */
+        .new-logo {
+            width: 80px;
+            /* Adjust size as needed */
+            height: auto;
+        }
+
+        /* Enhanced Apple UI/UX inspired hover effect */
+        .apple-button-effect {
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            /* Smooth transition */
+            will-change: transform, box-shadow, background-color, border-color;
+            /* Optimization */
+            position: relative;
+            /* Needed for z-index context if using pseudo-elements */
+            z-index: 1;
+            /* Ensure button is above its own shadow */
+        }
+
+        .apple-button-effect:hover {
+            transform: scale(1.02);
+            /* Slightly more pronounced grow */
+            box-shadow: 0 0 25px rgba(255, 255, 255, 0.15);
+            /* White glowing shadow */
+        }
+
+        /* ------------------------------------------------------------
+   MODAL BACKGROUND OVERLAY
+------------------------------------------------------------- */
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: grid;
+            place-items: center;
+            background: rgba(0, 0, 0, 0.55);
+            backdrop-filter: blur(4px);
+            z-index: 50;
+        }
+
+        .modal.hidden {
+            display: none;
+        }
+
+        /* ------------------------------------------------------------
+   MODAL PANEL (GLASS LOOK)
+------------------------------------------------------------- */
+        .modal-panel {
+            width: 100%;
+            max-width: 420px;
+            padding: 24px;
+            border-radius: 18px;
+
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.65);
+            backdrop-filter: blur(12px);
+
+            animation: fadeIn 0.25s ease-out;
+        }
+
+        /* ------------------------------------------------------------
+   INPUT FIELDS (FIT YOUR THEME)
+------------------------------------------------------------- */
+        .input {
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 12px;
+
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+
+            color: white;
+            font-size: 14px;
+
+            transition: 0.2s ease;
+        }
+
+        .input:focus {
+            outline: none;
+            background: rgba(255, 255, 255, 0.08);
+            border-color: #00b4d8;
+        }
+
+        /* ------------------------------------------------------------
+   BUTTONS USED IN POPUP
+------------------------------------------------------------- */
+        .btn-primary {
+            background: #00b4d8;
+            padding: 10px 16px;
+            border-radius: 10px;
+
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+
+            transition: 0.15s ease;
+        }
+
+        .btn-primary:hover {
+            background: #009ec4;
+        }
+
+        .btn-secondary {
+            padding: 10px 16px;
+            border-radius: 10px;
+
+            background: transparent;
+            color: white;
+
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            font-size: 14px;
+
+            transition: 0.15s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        /* ------------------------------------------------------------
+   SMOOTH POPUP FADE ANIMATION
+------------------------------------------------------------- */
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
