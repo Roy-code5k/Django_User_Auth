@@ -108,6 +108,15 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ---------------------------------------------------------------
+# AUTHENTICATION BACKENDS
+# ---------------------------------------------------------------
+AUTHENTICATION_BACKENDS = [
+    'core.backends.CaseInsensitiveModelBackend',  # Custom case-insensitive login
+    'django.contrib.auth.backends.ModelBackend',  # Default fallback
+]
+
+
+# ---------------------------------------------------------------
 # INTERNATIONALIZATION (default)
 # ---------------------------------------------------------------
 LANGUAGE_CODE = 'en-us'
