@@ -108,10 +108,10 @@ AUTH_PASSWORD_VALIDATORS = [
 
 
 # ---------------------------------------------------------------
-# AUTHENTICATION BACKENDS
+# AUTHENTICATION BACKENDS SIGN IN
 # ---------------------------------------------------------------
 AUTHENTICATION_BACKENDS = [
-    'core.backends.CaseInsensitiveModelBackend',  # Custom case-insensitive login
+    'core.auth.CaseInsensitiveModelBackend',  # Custom case-insensitive login
     'django.contrib.auth.backends.ModelBackend',  # Default fallback
 ]
 
