@@ -8,9 +8,24 @@ class Profile(models.Model):
     avatar = models.ImageField(upload_to='avatars/', blank=True, null=True)
     
     # Social Links
-    instagram = models.URLField(blank=True)
-    linkedin = models.URLField(blank=True)
-    github = models.URLField(blank=True)
+    def validate_instagram(value):
+        if "instagram.com" not in value.lower():
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Please enter a valid Instagram URL.")
+
+    def validate_linkedin(value):
+        if "linkedin.com" not in value.lower():
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Please enter a valid LinkedIn URL.")
+
+    def validate_github(value):
+        if "github.com" not in value.lower():
+            from django.core.exceptions import ValidationError
+            raise ValidationError("Please enter a valid GitHub URL.")
+
+    instagram = models.URLField(blank=True, validators=[validate_instagram])
+    linkedin = models.URLField(blank=True, validators=[validate_linkedin])
+    github = models.URLField(blank=True, validators=[validate_github])
     gmail = models.EmailField(blank=True)
 
     def __str__(self):
