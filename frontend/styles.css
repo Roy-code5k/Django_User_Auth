@@ -90,6 +90,25 @@
             display: none;
         }
 
+        /* Cropper.js custom styling - White borders */
+        .cropper-view-box {
+            outline: 2px solid white !important;
+            outline-color: white !important;
+        }
+
+        .cropper-line {
+            background-color: white !important;
+        }
+
+        .cropper-point {
+            background-color: white !important;
+            border: 2px solid white !important;
+        }
+
+        .cropper-face {
+            background-color: transparent !important;
+        }
+
         /* ------------------------------------------------------------
    MODAL PANEL (GLASS LOOK)
 ------------------------------------------------------------- */

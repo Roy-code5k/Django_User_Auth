@@ -148,8 +148,7 @@
                     </div>
 
                     <!-- Image Preview -->
-                    <img id="photo-preview-img"
-                        class="absolute inset-0 w-full h-full object-cover hidden z-10 pointer-events-none">
+                    <img id="photo-preview-img" class="absolute inset-0 w-full h-full object-cover hidden z-10">
                 </div>
 
                 <input type="text" id="caption-input" placeholder="Caption (optional)" class="input">
@@ -176,7 +175,9 @@
         </div>
     </div>
 
-    <script src="{% static 'script.js' %}?v=13"></script>
+    <!-- Main Script (Module) -->
+    <!-- Main Script (Module) -->
+    <script type="module" src="{% static 'main.js' %}"></script>
 </body>
 
 </html>

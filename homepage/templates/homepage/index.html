@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Happening Now - Login</title>
+    <title>Happening Now - Login (Updated)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{% static 'styles.css' %}">
@@ -101,8 +101,15 @@
                         characters</p>
                 </div>
                 <input name="email" type="email" placeholder="Email" class="input" required />
-                <<<<<<< HEAD <div>
-                    <input name="password" type="password" placeholder="Password" class="input" required />
+                <div>
+                    <div class="relative">
+                        <input id="signup-pass" name="password" type="password" placeholder="Password"
+                            class="input pr-10" required />
+                        <button type="button" id="toggle-signup-pass"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
                     <!-- Password Strength Indicator -->
                     <div id="password-strength" class="mt-2 hidden">
                         <div class="flex items-center gap-2 mb-2">
@@ -131,37 +138,25 @@
                             </li>
                         </ul>
                     </div>
-        </div>
-        <div>
-            <input name="password2" type="password" placeholder="Confirm Password" class="input" required />
-            <p id="password-match-error" class="text-red-400 text-xs mt-1 hidden">Passwords do not match</p>
-            =======
+                </div>
+                <div>
+                    <div class="relative">
+                        <input id="signup-pass2" name="password2" type="password" placeholder="Confirm Password"
+                            class="input pr-10" required />
+                        <button type="button" id="toggle-signup-pass2"
+                            class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <p id="password-match-error" class="text-red-400 text-xs mt-1 hidden">Passwords do not match</p>
+                </div>
 
-            <div class="relative">
-                <input id="signup-pass" name="password" type="password" placeholder="Password" class="input pr-10"
-                    required />
-                <button type="button" id="toggle-signup-pass"
-                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-                    <i class="fas fa-eye"></i>
-                </button>
-            </div>
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary">Create Account</button>
+                    <button type="button" id="signup-cancel" class="btn-secondary">Cancel</button>
+                </div>
 
-            <div class="relative">
-                <input id="signup-pass2" name="password2" type="password" placeholder="Confirm Password"
-                    class="input pr-10" required />
-                <button type="button" id="toggle-signup-pass2"
-                    class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-                    <i class="fas fa-eye"></i>
-                </button>
-                >>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
-            </div>
-
-            <div class="flex gap-3">
-                <button type="submit" class="btn-primary">Create Account</button>
-                <button type="button" id="signup-cancel" class="btn-secondary">Cancel</button>
-            </div>
-
-            <p id="signup-error" class="text-red-400 text-sm"></p>
+                <p id="signup-error" class="text-red-400 text-sm"></p>
             </form>
         </div>
     </div>
@@ -192,7 +187,9 @@
         </div>
     </div>
 
-    <script src="{% static 'script.js' %}?v=9"></script>
+    <!-- Main Script (Module) -->
+    <!-- Main Script (Module) -->
+    <script type="module" src="{% static 'main.js' %}"></script>
 </body>
 
 </html>
