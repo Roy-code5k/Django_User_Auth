@@ -223,78 +223,6 @@ function showToast(message, type = 'success') {
 }
 
 
-// -------------------------------------------------------------
-// GLOBAL UTILITY: JWT TOKEN REFRESH
-// -------------------------------------------------------------
-async function refreshAccessToken() {
-    const refreshToken = localStorage.getItem('refresh');
-
-    if (!refreshToken) {
-        console.log('No refresh token found');
-        return null;
-    }
-
-    try {
-        const response = await fetch('/api/token/refresh/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ refresh: refreshToken })
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            localStorage.setItem('access', data.access);
-            console.log('Access token refreshed successfully');
-            return data.access;
-        } else {
-            console.log('Refresh token expired or invalid');
-            localStorage.removeItem('access');
-            localStorage.removeItem('refresh');
-            return null;
-        }
-    } catch (error) {
-        console.error('Error refreshing token:', error);
-        return null;
-    }
-}
-
-async function fetchWithTokenRefresh(url, options = {}) {
-    const token = localStorage.getItem('access');
-
-    // Add authorization header if not present
-    if (token && !options.headers) {
-        options.headers = {};
-    }
-    if (token) {
-        options.headers['Authorization'] = `Bearer ${token}`;
-    }
-
-    // Make the initial request
-    let response = await fetch(url, options);
-
-    // If 401 Unauthorized, try to refresh token and retry
-    if (response.status === 401) {
-        console.log('Access token expired, attempting refresh...');
-
-        const newToken = await refreshAccessToken();
-
-        if (newToken) {
-            // Retry request with new token
-            options.headers['Authorization'] = `Bearer ${newToken}`;
-            response = await fetch(url, options);
-            console.log('Request retried with new token');
-        } else {
-            // Refresh failed, redirect to login
-            console.log('Token refresh failed, redirecting to login...');
-            window.location.href = '/';
-            return response;
-        }
-    }
-
-    return response;
-}
 
 // -------------------------------------------------------------
 // PART 2: JWT AUTH + POPUP LOGIC (LANDING PAGE ONLY)
@@ -318,49 +246,6 @@ if (signupModal && signinModal) {
     if (signinBtn) signinBtn.onclick = () => signinModal.classList.remove("hidden");
     if (signupCancel) signupCancel.onclick = () => signupModal.classList.add("hidden");
     if (signinCancel) signinCancel.onclick = () => signinModal.classList.add("hidden");
-
-
-    // -------------------------------------------------------------
-    // PASSWORD VISIBILITY TOGGLE
-    // -------------------------------------------------------------
-    // Signup password toggle
-    const toggleSignupPass = document.getElementById('toggle-signup-pass');
-    const signupPassInput = document.getElementById('signup-pass');
-    if (toggleSignupPass && signupPassInput) {
-        toggleSignupPass.addEventListener('click', () => {
-            const type = signupPassInput.type === 'password' ? 'text' : 'password';
-            signupPassInput.type = type;
-            const icon = toggleSignupPass.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
-        });
-    }
-
-    // Signup confirm password toggle
-    const toggleSignupPass2 = document.getElementById('toggle-signup-pass2');
-    const signupPass2Input = document.getElementById('signup-pass2');
-    if (toggleSignupPass2 && signupPass2Input) {
-        toggleSignupPass2.addEventListener('click', () => {
-            const type = signupPass2Input.type === 'password' ? 'text' : 'password';
-            signupPass2Input.type = type;
-            const icon = toggleSignupPass2.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
-        });
-    }
-
-    // Signin password toggle
-    const toggleSigninPass = document.getElementById('toggle-signin-pass');
-    const signinPassInput = document.getElementById('signin-pass');
-    if (toggleSigninPass && signinPassInput) {
-        toggleSigninPass.addEventListener('click', () => {
-            const type = signinPassInput.type === 'password' ? 'text' : 'password';
-            signinPassInput.type = type;
-            const icon = toggleSigninPass.querySelector('i');
-            icon.classList.toggle('fa-eye');
-            icon.classList.toggle('fa-eye-slash');
-        });
-    }
 
 
     // -------------------------------------------------------------
@@ -676,62 +561,8 @@ if (signupModal && signinModal) {
 // -------------------------------------------------------------
 if (window.location.pathname.includes('/dashboard/')) {
 
-    // Helper: Logout
-    const logout = () => {
-        localStorage.clear();
-        window.location.href = '/';
-    };
-
-    // Helper: Authenticated Fetch with Auto-Refresh
-    async function authFetch(url, options = {}) {
-        let token = localStorage.getItem('access');
-        if (!token) {
-            logout();
-            return Promise.reject("No token");
-        }
-
-        // Inject Header
-        options.headers = options.headers || {};
-        // Handle if headers is NOT a Headers object (simple object)
-        options.headers['Authorization'] = `Bearer ${token}`;
-
-        let response = await fetch(url, options);
-
-        // Handle 401 (Unauthorized/Expired)
-        if (response.status === 401) {
-            console.warn("Access token expired. Refreshing...");
-            const refresh = localStorage.getItem('refresh');
-
-            if (!refresh) {
-                logout();
-                return response;
-            }
-
-            try {
-                const refreshRes = await fetch('/api/token/refresh/', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ refresh })
-                });
-
-                if (refreshRes.ok) {
-                    const data = await refreshRes.json();
-                    localStorage.setItem('access', data.access);
-
-                    // Retry original request with NEW token
-                    options.headers['Authorization'] = `Bearer ${data.access}`;
-                    response = await fetch(url, options);
-                } else {
-                    console.error("Session expired completely.");
-                    logout();
-                }
-            } catch (err) {
-                console.error("Refresh failed:", err);
-                logout();
-            }
-        }
-        return response;
-    }
+    const token = localStorage.getItem('access');
+    if (!token) window.location.href = '/'; // Redirect if not logged in
 
     // Elements
     const titleInput = document.getElementById('title-input');
@@ -822,12 +653,9 @@ if (window.location.pathname.includes('/dashboard/')) {
     async function loadProfile() {
         console.log("Loading profile data...");
         try {
-<<<<<<< HEAD
-            const res = await fetchWithTokenRefresh('/api/profile/', {});
-=======
-            // Replaced fetch with authFetch
-            const res = await authFetch('/api/profile/');
->>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
+            const res = await fetch('/api/profile/', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
             console.log("Profile API status:", res.status);
 
             if (res.ok) {
@@ -893,36 +721,30 @@ if (window.location.pathname.includes('/dashboard/')) {
     // CROPPER LOGIC
     // ---------------------------------------------------------
     let cropper = null;
-    let cropperMode = 'avatar'; // 'avatar' or 'gallery'
-    let currentGalleryBlob = null; // Store cropped blob for gallery upload
-
     const cropperModal = document.getElementById('cropper-modal');
     const cropperImage = document.getElementById('cropper-image');
 
-    // Helper to open cropper
-    const openCropper = (file, mode) => {
-        if (!file) return;
-        cropperMode = mode;
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            cropperImage.src = e.target.result;
-            cropperModal.classList.remove('hidden');
-
-            // Init Cropper
-            if (cropper) cropper.destroy();
-            cropper = new Cropper(cropperImage, {
-                aspectRatio: 1,
-                viewMode: 1,
-            });
-        };
-        reader.readAsDataURL(file);
-    };
-
-    // 1. Intercept File Selection (Avatar)
+    // 1. Intercept File Selection
     avatarInput.addEventListener('change', (e) => {
-        openCropper(e.target.files[0], 'avatar');
-        e.target.value = ''; // Clear input
+        console.log("File selected:", e.target.files[0]);
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                cropperImage.src = e.target.result;
+                cropperModal.classList.remove('hidden');
+
+                // Init Cropper
+                if (cropper) cropper.destroy();
+                cropper = new Cropper(cropperImage, {
+                    aspectRatio: 1,
+                    viewMode: 1,
+                });
+            };
+            reader.readAsDataURL(file);
+        }
+        // Clear input so same file can be selected again
+        e.target.value = '';
     });
 
     // 2. Cancel Crop
@@ -937,175 +759,113 @@ if (window.location.pathname.includes('/dashboard/')) {
         if (!cropper) return;
 
         const saveBtn = document.getElementById('crop-save-btn');
+
+        // Set loading state
         setButtonLoading(saveBtn, true);
 
         cropper.getCroppedCanvas().toBlob(async (blob) => {
+            const formData = new FormData();
+            formData.append('avatar', blob, 'avatar.png');
 
-<<<<<<< HEAD
-            await fetchWithTokenRefresh('/api/profile/', {
+            await fetch('/api/profile/', {
                 method: 'PATCH',
-                body: formData
-            });
-=======
-            if (cropperMode === 'avatar') {
-                // --- AVATAR SAVE LOGIC (Direct Upload) ---
-                const formData = new FormData();
-                formData.append('avatar', blob, 'avatar.png');
->>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
-
-            // Replaced fetch with authFetch
-            await authFetch('/api/profile/', {
-                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${token}` },
                 body: formData
             });
 
             // Update UI
             avatarPreview.src = URL.createObjectURL(blob);
             cropperModal.classList.add('hidden');
-        }
-            else if (cropperMode === 'gallery') {
-            // --- GALLERY SAVE LOGIC (Local Store & Preview) ---
-            currentGalleryBlob = blob;
-
-            // Show preview in Photo Modal
-            const previewImg = document.getElementById('photo-preview-img');
-            const placeholder = document.getElementById('photo-placeholder');
-
-            if (previewImg && placeholder) {
-                previewImg.src = URL.createObjectURL(blob);
-                previewImg.classList.remove('hidden');
-                placeholder.classList.add('hidden');
-            }
-
-            cropperModal.classList.add('hidden');
-        }
-
-        if (cropper) {
             cropper.destroy();
             cropper = null;
-        }
-        setButtonLoading(saveBtn, false);
-    });
-});
 
-// Update Profile (Text Only)
-document.getElementById('profile-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // Button is outside the form, so we can't use e.target.querySelector
-    const submitBtn = document.querySelector('button[form="profile-form"]');
-
-    // Validate all social links before submitting
-    const instagramValid = validateSocialLink(instagramInput, 'instagram');
-    const linkedinValid = validateSocialLink(linkedinInput, 'linkedin');
-    const githubValid = validateSocialLink(githubInput, 'github');
-    const gmailValid = validateSocialLink(gmailInput, 'gmail');
-
-    // If any validation fails, don't submit
-    if (!instagramValid || !linkedinValid || !githubValid || !gmailValid) {
-        showToast('Please fix validation errors before saving', 'error');
-        return;
-    }
-
-    const payload = {
-        title: titleInput.value,
-        description: descInput.value,
-        instagram: instagramInput.value,
-        linkedin: linkedinInput.value,
-        github: githubInput.value,
-        gmail: gmailInput.value
-    };
-
-    // Set loading state
-    setButtonLoading(submitBtn, true);
-
-<<<<<<< HEAD
-    await fetchWithTokenRefresh('/api/profile/', {
-=======
-        // Replaced fetch with authFetch
-        await authFetch('/api/profile/', {
->>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
-        method: 'PATCH',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
+            // Remove loading state
+            setButtonLoading(saveBtn, false);
+            // alert('Profile picture updated!');
+        });
     });
 
-    loadProfile();
+    // Update Profile (Text Only)
+    document.getElementById('profile-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    // Remove loading state
-    setButtonLoading(submitBtn, false);
+        // Button is outside the form, so we can't use e.target.querySelector
+        const submitBtn = document.querySelector('button[form="profile-form"]');
 
-    // Show success toast
-    showToast('Profile updated successfully!', 'success');
-});
+        // Validate all social links before submitting
+        const instagramValid = validateSocialLink(instagramInput, 'instagram');
+        const linkedinValid = validateSocialLink(linkedinInput, 'linkedin');
+        const githubValid = validateSocialLink(githubInput, 'github');
+        const gmailValid = validateSocialLink(gmailInput, 'gmail');
 
-// Logout
-document.getElementById('logout-btn').addEventListener('click', logout);
-
-// ---------------------------------------------------------
-// GALLERY LOGIC
-// ---------------------------------------------------------
-const photoModal = document.getElementById('photo-modal');
-const photoInput = document.getElementById('photo-input');
-const photoPreview = document.getElementById('photo-preview-img');
-const photoPlaceholder = document.getElementById('photo-placeholder');
-
-const resetPhotoModal = () => {
-    photoModal.classList.add('hidden');
-    document.getElementById('photo-form').reset();
-    currentGalleryBlob = null; // Clear blob
-
-    // Reset Preview
-    if (photoPreview) {
-        photoPreview.src = '';
-        photoPreview.classList.add('hidden');
-    }
-    if (photoPlaceholder) {
-        photoPlaceholder.classList.remove('hidden');
-    }
-};
-
-document.getElementById('add-photo-btn').onclick = () => photoModal.classList.remove('hidden');
-document.getElementById('photo-cancel').onclick = resetPhotoModal;
-
-// Photo Preview Listener -> NOW OPENS CROPPER
-if (photoInput && photoPreview && photoPlaceholder) {
-    photoInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            openCropper(file, 'gallery');
+        // If any validation fails, don't submit
+        if (!instagramValid || !linkedinValid || !githubValid || !gmailValid) {
+            showToast('Please fix validation errors before saving', 'error');
+            return;
         }
-        // We don't need to manually set preview here; crop save will do it
-        e.target.value = ''; // Clear input so we can select same file again if needed
+
+        const payload = {
+            title: titleInput.value,
+            description: descInput.value,
+            instagram: instagramInput.value,
+            linkedin: linkedinInput.value,
+            github: githubInput.value,
+            gmail: gmailInput.value
+        };
+
+        // Set loading state
+        setButtonLoading(submitBtn, true);
+
+        await fetch('/api/profile/', {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+
+        loadProfile();
+
+        // Remove loading state
+        setButtonLoading(submitBtn, false);
+
+        // Show success toast
+        showToast('Profile updated successfully!', 'success');
     });
-}
 
-// Load Photos
-async function loadPhotos() {
-<<<<<<< HEAD
-    const res = await fetchWithTokenRefresh('/api/photos/', {});
-=======
-        // Replaced fetch with authFetch
-        const res = await authFetch('/api/photos/');
->>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
-    if (res.ok) {
-        const photos = await res.json();
+    // Logout
+    document.getElementById('logout-btn').addEventListener('click', () => {
+        localStorage.clear();
+        window.location.href = '/';
+    });
 
-        // Limit Check (Max 6 photos)
-        const addBtn = document.getElementById('add-photo-btn');
-        const countSpan = document.getElementById('photo-count');
+    // ---------------------------------------------------------
+    // GALLERY LOGIC
+    // ---------------------------------------------------------
+    const photoModal = document.getElementById('photo-modal');
+    const photoInput = document.getElementById('photo-input');
 
-        if (countSpan) countSpan.textContent = `(${photos.length}/6)`;
+    document.getElementById('add-photo-btn').onclick = () => photoModal.classList.remove('hidden');
+    document.getElementById('photo-cancel').onclick = () => photoModal.classList.add('hidden');
 
-        if (photos.length >= 6) {
-            addBtn.style.display = 'none';
-        } else {
-            addBtn.style.display = ''; // Reset to default
-        }
+    // Load Photos
+    async function loadPhotos() {
+        const res = await fetch('/api/photos/', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const photos = await res.json();
 
-        galleryGrid.innerHTML = photos.map(photo => `
+            // Limit Check (Max 6 photos)
+            const addBtn = document.getElementById('add-photo-btn');
+            if (photos.length >= 6) {
+                addBtn.style.display = 'none';
+            } else {
+                addBtn.style.display = ''; // Reset to default
+            }
+
+            galleryGrid.innerHTML = photos.map(photo => `
                 <div class="relative group aspect-square bg-black/20 rounded-xl overflow-hidden">
                     <img src="${photo.image}" class="w-full h-full object-cover">
                     <div class="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center">
@@ -1115,68 +875,56 @@ async function loadPhotos() {
                     </div>
                 </div>
             `).join('');
-    }
-}
-
-// Upload Photo
-document.getElementById('photo-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    const submitBtn = e.target.querySelector('button[type="submit"]');
-
-    if (!currentGalleryBlob) {
-        alert("Please select and crop an image first.");
-        return;
+        }
     }
 
-    const formData = new FormData();
-    formData.append('image', currentGalleryBlob, 'photo.png');
-    formData.append('caption', document.getElementById('caption-input').value);
+    // Upload Photo
+    document.getElementById('photo-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
 
-    // Set loading state
-    setButtonLoading(submitBtn, true);
+        const submitBtn = e.target.querySelector('button[type="submit"]');
+        const file = photoInput.files[0];
+        if (!file) return;
 
-<<<<<<< HEAD
-    const res = await fetchWithTokenRefresh('/api/photos/', {
-=======
-        // Replaced fetch with authFetch
-        const res = await authFetch('/api/photos/', {
->>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
-        method: 'POST',
-        body: formData
+        const formData = new FormData();
+        formData.append('image', file);
+        formData.append('caption', document.getElementById('caption-input').value);
+
+        // Set loading state
+        setButtonLoading(submitBtn, true);
+
+        const res = await fetch('/api/photos/', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}` },
+            body: formData
+        });
+
+        if (res.ok) {
+            photoModal.classList.add('hidden');
+            loadPhotos();
+            e.target.reset();
+            setButtonLoading(submitBtn, false);
+        } else {
+            const data = await res.json();
+            alert(data.detail || "Upload failed. Limit reached?");
+            setButtonLoading(submitBtn, false);
+        }
     });
 
-    if (res.ok) {
-        resetPhotoModal();
+    // Delete Photo (Global function for onclick)
+    window.deletePhoto = async (id) => {
+        await fetch(`/api/photos/${id}/`, {
+            method: 'DELETE',
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+
         loadPhotos();
-        setButtonLoading(submitBtn, false);
-    } else {
-        const data = await res.json();
-        alert(data.detail || "Upload failed. Limit reached?");
-        setButtonLoading(submitBtn, false);
-    }
-});
 
-// Delete Photo (Global function for onclick)
-window.deletePhoto = async (id) => {
-<<<<<<< HEAD
-    await fetchWithTokenRefresh(`/api/photos/${id}/`, {
-=======
-        if (!confirm('Delete this photo?')) return;
+        // Show success toast
+        showToast('Photo deleted successfully!', 'success');
+    };
 
-        // Replaced fetch with authFetch
-        await authFetch(`/api/photos/${id}/`, {
->>>>>>> bd9188659d625d9d51ebeda19d9415ff9b885aa0
-        method: 'DELETE'
-    });
-
+    // Init
+    loadProfile();
     loadPhotos();
-
-    // Show success toast
-    showToast('Photo deleted successfully!', 'success');
-};
-
-// Init
-loadProfile();
-loadPhotos();
 }
