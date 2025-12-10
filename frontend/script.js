@@ -631,6 +631,10 @@ if (window.location.pathname.includes('/dashboard/')) {
 
             // Limit Check (Max 6 photos)
             const addBtn = document.getElementById('add-photo-btn');
+            const countSpan = document.getElementById('photo-count');
+
+            if (countSpan) countSpan.textContent = `(${photos.length}/6)`;
+
             if (photos.length >= 6) {
                 addBtn.style.display = 'none';
             } else {
