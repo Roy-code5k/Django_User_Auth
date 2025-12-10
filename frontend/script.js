@@ -185,6 +185,31 @@ if (signupModal && signinModal) {
     if (signupCancel) signupCancel.onclick = () => signupModal.classList.add("hidden");
     if (signinCancel) signinCancel.onclick = () => signinModal.classList.add("hidden");
 
+    // -------------------------------------------------------------
+    // PASSWORD VISIBILITY TOGGLE
+    // -------------------------------------------------------------
+    const toggleVisibility = (inputId, btnId) => {
+        const input = document.getElementById(inputId);
+        const btn = document.getElementById(btnId);
+
+        if (input && btn) {
+            btn.addEventListener('click', () => {
+                const isPassword = input.type === 'password';
+                input.type = isPassword ? 'text' : 'password';
+
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-eye');
+                    icon.classList.toggle('fa-eye-slash');
+                }
+            });
+        }
+    };
+
+    toggleVisibility('signup-pass', 'toggle-signup-pass');
+    toggleVisibility('signup-pass2', 'toggle-signup-pass2');
+    toggleVisibility('signin-pass', 'toggle-signin-pass');
+
 
     // -------------------------------------------------------------
     // SIGNUP FORM SUBMIT
