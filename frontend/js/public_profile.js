@@ -18,6 +18,7 @@ export function initPublicProfile() {
     const postCommentBtn = document.getElementById('post-comment-btn');
 
     let currentPhotoId = null;
+    let currentUser = null; // Store current user info
     const accessToken = localStorage.getItem('access');
 
     if (!lightboxModal) return;
@@ -29,6 +30,21 @@ export function initPublicProfile() {
             'Content-Type': 'application/json'
         };
     }
+
+    // --- Fetch Current User ---
+    async function fetchCurrentUser() {
+        if (!accessToken) return;
+        try {
+            const res = await fetch('/api/me/', { headers: getAuthHeaders() });
+            if (res.ok) {
+                currentUser = await res.json();
+            }
+        } catch (err) {
+            console.error("Failed to fetch user:", err);
+        }
+    }
+    // Initial fetch
+    fetchCurrentUser();
 
     // --- 1. Load Data (Likes & Comments) ---
     async function loadPhotoData(photoId) {
@@ -83,7 +99,14 @@ export function initPublicProfile() {
 
         comments.forEach(comment => {
             const div = document.createElement('div');
-            div.className = 'flex gap-3 text-sm';
+            div.className = 'flex gap-3 text-sm group relative'; // Added relative + group
+
+            // Check ownership
+            const isOwner = currentUser && (currentUser.username === comment.username);
+            const deleteBtn = isOwner
+                ? `<button class="delete-comment-btn absolute right-0 top-0 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-2" data-id="${comment.id}"><i class="fas fa-trash"></i></button>`
+                : '';
+
             div.innerHTML = `
                 <div class="w-8 h-8 shrink-0 rounded-full bg-gray-700 overflow-hidden border border-white/20">
                      ${comment.avatar
@@ -91,17 +114,47 @@ export function initPublicProfile() {
                     : `<div class="w-full h-full bg-purple-500 flex items-center justify-center text-[8px] font-bold">${comment.username[0].toUpperCase()}</div>`
                 }
                 </div>
-                <div>
+                <div class="flex-1">
                     <span class="font-bold text-white mr-2">${comment.username}</span>
-                    <span class="text-gray-300">${comment.text}</span>
+                    <span class="text-gray-300 break-words">${comment.text}</span>
                 </div>
+                ${deleteBtn}
             `;
             commentsList.appendChild(div);
+        });
+
+        // Add Delete Listeners
+        document.querySelectorAll('.delete-comment-btn').forEach(btn => {
+            btn.addEventListener('click', handleDeleteComment);
         });
 
         // Scroll to bottom
         const container = document.getElementById('lightbox-comments-container');
         if (container) container.scrollTop = container.scrollHeight;
+    }
+
+    async function handleDeleteComment(e) {
+        if (!confirm("Delete this comment?")) return;
+
+        const btn = e.currentTarget;
+        const commentId = btn.getAttribute('data-id');
+        const commentDiv = btn.closest('.flex'); // The parent container
+
+        try {
+            const res = await fetch(`/api/comments/${commentId}/`, {
+                method: 'DELETE',
+                headers: getAuthHeaders()
+            });
+
+            if (res.ok) {
+                commentDiv.remove();
+                // If list empty, show placeholder? Optional.
+            } else {
+                alert("Failed to delete comment");
+            }
+        } catch (err) {
+            console.error("Delete error", err);
+        }
     }
 
     // --- 2. Action Handlers ---
