@@ -200,13 +200,23 @@ class PhotoCommentListView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         photo_id = self.kwargs['photo_id']
-        return PhotoComment.objects.filter(photo_id=photo_id).order_by('created_at')
+        # Return only top-level comments (parent=None)
+        return PhotoComment.objects.filter(photo_id=photo_id, parent=None).order_by('created_at')
 
     def perform_create(self, serializer):
         photo_id = self.kwargs['photo_id']
+        parent_id = self.request.data.get('parent_id')
+        parent = None
+        
         try:
             photo = UserPhoto.objects.get(id=photo_id)
-            serializer.save(user=self.request.user, photo=photo)
+            if parent_id:
+                try:
+                    parent = PhotoComment.objects.get(id=parent_id, photo=photo)
+                except PhotoComment.DoesNotExist:
+                    raise serializers.ValidationError("Parent comment not found")
+            
+            serializer.save(user=self.request.user, photo=photo, parent=parent)
         except UserPhoto.DoesNotExist:
             raise serializers.ValidationError("Photo not found")
 

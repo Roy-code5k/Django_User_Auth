@@ -110,10 +110,65 @@ export function initPublicProfile() {
         }
     }
 
+    // State for Reply
+    let replyingToId = null;
+    let replyingToUser = null;
+
+    // --- 2. Action Handlers --- 
+
+    // Helper to render single comment (recursive)
+    function createCommentHTML(comment, isNested = false) {
+        const currentUsername = currentUser ? currentUser.username : null;
+        const pathParts = window.location.pathname.split('/');
+        const profileOwnerUsername = pathParts[2];
+        const isAuthor = currentUsername === comment.username;
+        const isProfileOwner = currentUsername === profileOwnerUsername;
+        const isOwner = currentUsername && (isAuthor || isProfileOwner);
+
+        const deleteBtn = isOwner
+            ? `<button class="delete-comment-btn absolute right-0 top-0 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-2" data-id="${comment.id}"><i class="fas fa-trash"></i></button>`
+            : '';
+
+        const replyBtn = (accessToken && !isNested)
+            ? `<button class="reply-comment-btn text-xs text-gray-400 hover:text-white mt-1" data-id="${comment.id}" data-username="${comment.username}">Reply</button>`
+            : '';
+
+        const nestedClass = isNested ? 'ml-10 mt-2 border-l-2 border-white/10 pl-3' : 'mb-3';
+
+        let html = `
+            <div class="relative group ${nestedClass}">
+                <div class="flex gap-3 text-sm">
+                    <div class="w-8 h-8 shrink-0 rounded-full bg-gray-700 overflow-hidden border border-white/20">
+                        ${comment.avatar
+                ? `<img src="${comment.avatar}" class="w-full h-full object-cover">`
+                : `<div class="w-full h-full bg-purple-500 flex items-center justify-center text-[8px] font-bold">${comment.username[0].toUpperCase()}</div>`
+            }
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center justify-between">
+                            <span class="font-bold text-white mr-2">${comment.username}</span>
+                        </div>
+                        <span class="text-gray-300 break-words">${comment.text}</span>
+                        <div class="flex gap-4">
+                            ${replyBtn}
+                        </div>
+                    </div>
+                    ${deleteBtn}
+                </div>
+        `;
+
+        // Recursively render replies
+        if (comment.replies && comment.replies.length > 0) {
+            comment.replies.forEach(reply => {
+                html += createCommentHTML(reply, true);
+            });
+        }
+
+        html += `</div>`;
+        return html;
+    }
+
     function renderComments(comments) {
-        // If we are polling, we might want to avoid completely wiping content if specific edits differ
-        // But for "flawless" simplicity: simple re-render is okay if it doesn't break scroll.
-        // We will preserve scroll position.
         const container = document.getElementById('lightbox-comments-container');
         const scrollPos = container ? container.scrollTop : 0;
         const wasAtBottom = container ? (container.scrollHeight - container.scrollTop === container.clientHeight) : false;
@@ -121,70 +176,50 @@ export function initPublicProfile() {
         commentsList.innerHTML = '';
         if (comments.length === 0) {
             commentsList.innerHTML = '<p class="text-xs text-gray-600 text-center py-4">No comments yet. Be the first!</p>';
-            return; // Scroll pos irrelevant here
+            return;
         }
 
-        // Determine Context
-        const currentUsername = currentUser ? currentUser.username : null;
+        commentsList.innerHTML = comments.map(c => createCommentHTML(c)).join('');
 
-        // Robust way to get Profile Owner from URL: /u/username/
-        const pathParts = window.location.pathname.split('/');
-        const profileOwnerUsername = pathParts[2];
-
-        comments.forEach(comment => {
-            const div = document.createElement('div');
-            div.className = 'flex gap-3 text-sm group relative';
-
-            const isAuthor = currentUsername === comment.username;
-            const isProfileOwner = currentUsername === profileOwnerUsername;
-            const isOwner = currentUsername && (isAuthor || isProfileOwner);
-
-            const deleteBtn = isOwner
-                ? `<button class="delete-comment-btn absolute right-0 top-0 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-2" data-id="${comment.id}"><i class="fas fa-trash"></i></button>`
-                : '';
-
-            div.innerHTML = `
-                <div class="w-8 h-8 shrink-0 rounded-full bg-gray-700 overflow-hidden border border-white/20">
-                     ${comment.avatar
-                    ? `<img src="${comment.avatar}" class="w-full h-full object-cover">`
-                    : `<div class="w-full h-full bg-purple-500 flex items-center justify-center text-[8px] font-bold">${comment.username[0].toUpperCase()}</div>`
-                }
-                </div>
-                <div class="flex-1">
-                    <span class="font-bold text-white mr-2">${comment.username}</span>
-                    <span class="text-gray-300 break-words">${comment.text}</span>
-                </div>
-                ${deleteBtn}
-            `;
-            commentsList.appendChild(div);
-        });
-
-        // Add Delete Listeners
+        // Listeners
         document.querySelectorAll('.delete-comment-btn').forEach(btn => {
             btn.addEventListener('click', handleDeleteComment);
         });
 
-        // Restore scroll or snap to bottom if it was at bottom
+        document.querySelectorAll('.reply-comment-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = e.target.getAttribute('data-id');
+                const username = e.target.getAttribute('data-username');
+                startReply(id, username);
+            });
+        });
+
+        // Restore scroll
         if (container) {
-            if (wasAtBottom) {
-                container.scrollTop = container.scrollHeight;
-            } else {
-                container.scrollTop = scrollPos;
-            }
+            if (wasAtBottom) container.scrollTop = container.scrollHeight;
+            else container.scrollTop = scrollPos;
         }
     }
 
-    // --- 2. Action Handlers ---
+    function startReply(id, username) {
+        replyingToId = id;
+        replyingToUser = username;
+        commentInput.placeholder = `Replying to @${username}...`;
+        commentInput.focus();
 
-    // Like Toggle
+        // Add visual indicator (optional)
+        postCommentBtn.textContent = 'Reply';
+    }
+
+    // Like Toggle (unchanged)
     if (likeBtn) {
         likeBtn.addEventListener('click', async () => {
+            // Re-using existing like logic for cleanliness
             if (!accessToken) {
                 alert("Please login to like photos!");
                 return;
             };
 
-            // Optimistic UI
             const isLiked = likeBtn.classList.contains('text-red-500');
             let count = parseInt(likeCount.textContent) || 0;
             updateLikeUI(!isLiked, isLiked ? count - 1 : count + 1);
@@ -199,7 +234,6 @@ export function initPublicProfile() {
                 updateLikeUI(data.is_liked, data.like_count);
             } catch (err) {
                 console.error("Like failed", err);
-                // Revert
                 updateLikeUI(isLiked, count);
             }
         });
@@ -210,6 +244,15 @@ export function initPublicProfile() {
         commentInput.addEventListener('input', (e) => {
             postCommentBtn.disabled = e.target.value.trim().length === 0;
         });
+
+        commentInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && replyingToId) {
+                replyingToId = null;
+                replyingToUser = null;
+                commentInput.placeholder = "Add a comment...";
+                postCommentBtn.textContent = 'Post';
+            }
+        });
     }
 
     if (commentForm) {
@@ -218,31 +261,37 @@ export function initPublicProfile() {
             const text = commentInput.value.trim();
             if (!text || !currentPhotoId || !accessToken) return;
 
-            // Show loading state
             const originalBtnText = postCommentBtn.textContent;
             postCommentBtn.textContent = '...';
             postCommentBtn.disabled = true;
+
+            const payload = { text };
+            if (replyingToId) {
+                payload.parent_id = replyingToId;
+            }
 
             try {
                 const res = await fetch(`/api/photos/${currentPhotoId}/comments/`, {
                     method: 'POST',
                     headers: getAuthHeaders(),
-                    body: JSON.stringify({ text })
+                    body: JSON.stringify(payload)
                 });
 
                 if (res.ok) {
                     commentInput.value = '';
-                    loadPhotoData(currentPhotoId, true); // Refresh immediately
+                    // Reset Reply State
+                    replyingToId = null;
+                    replyingToUser = null;
+                    commentInput.placeholder = "Add a comment...";
+                    postCommentBtn.textContent = 'Post';
 
-                    // Scroll to bottom
-                    const container = document.getElementById('lightbox-comments-container');
-                    if (container) container.scrollTop = container.scrollHeight;
+                    loadPhotoData(currentPhotoId, true); // Refresh immediately
                 }
             } catch (err) {
                 console.error("Comment failed", err);
             } finally {
-                postCommentBtn.textContent = originalBtnText;
-                postCommentBtn.disabled = true; // Remains disabled as input is empty
+                postCommentBtn.textContent = originalBtnText === 'Reply' ? 'Post' : 'Post';
+                postCommentBtn.disabled = true;
             }
         });
     }

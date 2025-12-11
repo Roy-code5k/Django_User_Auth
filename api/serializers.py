@@ -38,16 +38,23 @@ class ProfileSerializer(serializers.ModelSerializer):
 class CommentSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     avatar = serializers.SerializerMethodField()
+    parent_id = serializers.IntegerField(source='parent.id', read_only=True)
+    replies = serializers.SerializerMethodField()
 
     class Meta:
         model = PhotoComment
-        fields = ['id', 'username', 'avatar', 'text', 'created_at']
-        read_only_fields = ['id', 'username', 'avatar', 'created_at']
+        fields = ['id', 'username', 'avatar', 'text', 'created_at', 'parent_id', 'replies']
+        read_only_fields = ['id', 'username', 'avatar', 'created_at', 'parent_id', 'replies']
 
     def get_avatar(self, obj):
         if obj.user.profile.avatar:
             return obj.user.profile.avatar.url
         return None
+
+    def get_replies(self, obj):
+        if obj.replies.exists():
+            return CommentSerializer(obj.replies.all(), many=True).data
+        return []
 
 class UserPhotoSerializer(serializers.ModelSerializer):
     is_liked = serializers.SerializerMethodField()

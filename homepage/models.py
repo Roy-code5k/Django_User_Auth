@@ -83,6 +83,7 @@ class PhotoComment(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='photo_comments')
     photo = models.ForeignKey(UserPhoto, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField()
+    parent = models.ForeignKey('self', null=True, blank=True, on_delete=models.CASCADE, related_name='replies')
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
