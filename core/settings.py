@@ -222,3 +222,5 @@ SIMPLE_JWT = {
 
 
 
+ 
+GOOGLE_CLIENT_ID = '715843950550-diqg03nmv5dh756r366q9gq33bpu778p.apps.googleusercontent.com' 

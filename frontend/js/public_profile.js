@@ -56,8 +56,9 @@ export function initPublicProfile() {
             currentPhotoId = photoId;
             commentsList.innerHTML = '<p class="text-xs text-gray-500 text-center">Loading interactions...</p>';
             likeCount.textContent = '...';
-            likeBtn.innerHTML = '<i class="far fa-heart"></i>';
-            likeBtn.classList.remove('text-red-500');
+            likeBtn.innerHTML = '<i class="fas fa-infinity"></i>';
+            likeBtn.style.color = ''; // Reset
+            likeBtn.dataset.liked = "false";
 
             // Ensure currentUser is loaded before checks
             if (accessToken && !currentUser) {
@@ -101,12 +102,13 @@ export function initPublicProfile() {
 
     function updateLikeUI(isLiked, count) {
         likeCount.textContent = `${count} likes`;
+        likeBtn.dataset.liked = isLiked ? "true" : "false";
         if (isLiked) {
-            likeBtn.innerHTML = '<i class="fas fa-heart"></i>'; // Solid
-            likeBtn.classList.add('text-red-500');
+            likeBtn.innerHTML = '<i class="fas fa-infinity"></i>'; // Active
+            likeBtn.style.color = '#00b4d8';
         } else {
-            likeBtn.innerHTML = '<i class="far fa-heart"></i>'; // Outline
-            likeBtn.classList.remove('text-red-500');
+            likeBtn.innerHTML = '<i class="fas fa-infinity"></i>'; // Inactive
+            likeBtn.style.color = '';
         }
     }
 
@@ -220,7 +222,7 @@ export function initPublicProfile() {
                 return;
             };
 
-            const isLiked = likeBtn.classList.contains('text-red-500');
+            const isLiked = likeBtn.dataset.liked === "true";
             let count = parseInt(likeCount.textContent) || 0;
             updateLikeUI(!isLiked, isLiked ? count - 1 : count + 1);
 

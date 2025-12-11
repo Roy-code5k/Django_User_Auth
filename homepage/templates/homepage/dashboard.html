@@ -24,10 +24,6 @@
         class="fixed top-0 w-full z-50 glass-card border-b border-white/10 px-6 py-4 flex justify-between items-center">
         <div class="flex items-center gap-6">
             <div class="font-bold text-xl tracking-tight">Dashboard</div>
-            <a href="/community/"
-                class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full text-sm font-bold shadow-lg shadow-cyan-500/20 hover:scale-105 transition">
-                <i class="fas fa-users"></i> Community
-            </a>
         </div>
         <div class="flex gap-4">
             <button id="share-profile-btn" class="text-sm font-medium hover:text-[#00b4d8] transition">
@@ -39,6 +35,23 @@
                 class="text-sm font-medium text-red-400 hover:text-red-300 transition">Logout</button>
         </div>
     </nav>
+
+    <!-- Community Button (Floated Right) -->
+    <div class="fixed top-24 right-6 z-40 hidden lg:block">
+        <a href="/community/"
+            class="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-xl text-base font-bold shadow-lg shadow-cyan-500/20 hover:scale-105 transition hover:shadow-cyan-500/40">
+            <i class="fas fa-users text-lg"></i>
+            <span>Community Chat</span>
+        </a>
+    </div>
+
+    <!-- Mobile Community Button (Visible only on small screens) -->
+    <div class="lg:hidden fixed bottom-6 right-6 z-50">
+        <a href="/community/"
+            class="flex items-center justify-center w-14 h-14 bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full shadow-lg shadow-cyan-500/20 hover:scale-105 transition">
+            <i class="fas fa-users text-xl"></i>
+        </a>
+    </div>
 
     <div class="pt-24 pb-12 px-4 max-w-4xl mx-auto z-10 relative">
 
