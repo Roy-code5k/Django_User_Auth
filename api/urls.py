@@ -2,7 +2,8 @@ from django.urls import path
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
     RegisterView, resolve_username, me_view, 
-    ProfileDetailView, UserPhotoListCreateView, UserPhotoDetailView
+    ProfileDetailView, UserPhotoListCreateView, UserPhotoDetailView,
+    google_auth
 )
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     # JWT Login + Token Refresh
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
+    path('auth/google/', google_auth, name='google-auth'),
 ]
