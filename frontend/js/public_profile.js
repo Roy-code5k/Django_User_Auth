@@ -33,17 +33,19 @@ export function initPublicProfile() {
 
     // --- Fetch Current User ---
     async function fetchCurrentUser() {
-        if (!accessToken) return;
+        if (!accessToken) return null; // Add return value
         try {
             const res = await fetch('/api/me/', { headers: getAuthHeaders() });
             if (res.ok) {
                 currentUser = await res.json();
+                return currentUser;
             }
         } catch (err) {
             console.error("Failed to fetch user:", err);
         }
+        return null;
     }
-    // Initial fetch
+    // Initial fetch (fire and forget)
     fetchCurrentUser();
 
     // --- 1. Load Data (Likes & Comments) ---
@@ -54,21 +56,26 @@ export function initPublicProfile() {
         likeBtn.innerHTML = '<i class="far fa-heart"></i>';
         likeBtn.classList.remove('text-red-500');
 
-        if (!accessToken) {
-            commentsList.innerHTML = '<p class="text-xs text-gray-500 text-center">Login to view comments</p>';
-            return;
+        // Ensure currentUser is loaded before checks
+        if (accessToken && !currentUser) {
+            await fetchCurrentUser();
         }
+
+        // ALWAYS fetch data (Public Read)
 
         try {
             // A. Fetch Likes Status
-            const likeRes = await fetch(`/api/photos/${photoId}/like/`, { headers: getAuthHeaders() });
+            // Pass auth headers if available, otherwise just fetch
+            const likeHeaders = accessToken ? getAuthHeaders() : { 'Content-Type': 'application/json' };
+            const likeRes = await fetch(`/api/photos/${photoId}/like/`, { headers: likeHeaders });
+
             if (likeRes.ok) {
                 const likeData = await likeRes.json();
                 updateLikeUI(likeData.is_liked, likeData.like_count);
             }
 
             // B. Fetch Comments
-            const commentsRes = await fetch(`/api/photos/${photoId}/comments/`, { headers: getAuthHeaders() });
+            const commentsRes = await fetch(`/api/photos/${photoId}/comments/`, { headers: likeHeaders });
             if (commentsRes.ok) {
                 const comments = await commentsRes.json();
                 renderComments(comments);
@@ -76,6 +83,18 @@ export function initPublicProfile() {
         } catch (err) {
             console.error("Error loading photo data:", err);
             commentsList.innerHTML = '<p class="text-xs text-red-500">Failed to load data.</p>';
+        }
+
+        // C. Update UI based on Login State
+        if (!accessToken) {
+            // Guest Mode
+            commentInput.placeholder = "Login to comment";
+            commentInput.disabled = true;
+            postCommentBtn.disabled = true;
+        } else {
+            // User Mode
+            commentInput.placeholder = "Add a comment...";
+            commentInput.disabled = false;
         }
     }
 
@@ -97,12 +116,29 @@ export function initPublicProfile() {
             return;
         }
 
+        // Determine Context
+        const currentUsername = currentUser ? currentUser.username : null;
+
+        // Robust way to get Profile Owner from URL: /u/username/
+        // pathname = "/u/piyush/" -> split -> ["", "u", "piyush", ""]
+        const pathParts = window.location.pathname.split('/');
+        const profileOwnerUsername = pathParts[2];
+
+        console.log("Debug Permissions:", { currentUsername, profileOwnerUsername });
+
         comments.forEach(comment => {
             const div = document.createElement('div');
             div.className = 'flex gap-3 text-sm group relative'; // Added relative + group
 
-            // Check ownership
-            const isOwner = currentUser && (currentUser.username === comment.username);
+            // Logic: Show Delete if I am the Author OR I am the Profile Owner
+            const isAuthor = currentUsername === comment.username;
+            const isProfileOwner = currentUsername === profileOwnerUsername;
+
+            // Debug individual checks
+            // console.log(`Comment by ${comment.username}: isAuthor=${isAuthor}, isProfileOwner=${isProfileOwner}`);
+
+            const isOwner = currentUsername && (isAuthor || isProfileOwner);
+
             const deleteBtn = isOwner
                 ? `<button class="delete-comment-btn absolute right-0 top-0 text-gray-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition px-2" data-id="${comment.id}"><i class="fas fa-trash"></i></button>`
                 : '';
@@ -162,7 +198,14 @@ export function initPublicProfile() {
     // Like Toggle
     if (likeBtn) {
         likeBtn.addEventListener('click', async () => {
-            if (!accessToken || !currentPhotoId) return;
+            if (!accessToken) {
+                // Toast logic required here, but importing it is tricky if not exported
+                // We'll use a simple alert or just fallback to visual cue
+                alert("Please login to like photos!"); // Simple fallback
+                return;
+            };
+
+            // ... (rest is same)
 
             // Optimistic UI
             const isLiked = likeBtn.classList.contains('text-red-500');

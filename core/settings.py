@@ -134,6 +134,9 @@ AUTHENTICATION_BACKENDS = [
 # Fix for Google Sign-In Popup Hanging (COOP)
 SECURE_CROSS_ORIGIN_OPENER_POLICY = 'same-origin-allow-popups'
 
+# Google OAuth
+GOOGLE_CLIENT_ID = os.environ.get('GOOGLE_CLIENT_ID')
+
 # INTERNATIONALIZATION (default)
 # ---------------------------------------------------------------
 LANGUAGE_CODE = 'en-us'

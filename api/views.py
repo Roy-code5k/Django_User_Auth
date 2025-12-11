@@ -134,15 +134,22 @@ class UserPhotoDetailView(generics.DestroyAPIView):
 # -------------------------------------------------------------
 # LIKE FEATURE
 # -------------------------------------------------------------
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+
+# ... (Previous imports remain, ensuring IsAuthenticatedOrReadOnly is available)
+
+# -------------------------------------------------------------
+# LIKE FEATURE
+# -------------------------------------------------------------
 from homepage.models import PhotoLike, PhotoComment
 from .serializers import CommentSerializer
 
 @api_view(['GET', 'POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([IsAuthenticatedOrReadOnly])
 def toggle_like(request, photo_id):
     """
-    GET /api/photos/<id>/like/  -> Check status
-    POST /api/photos/<id>/like/ -> Toggle status
+    GET /api/photos/<id>/like/  -> Check status (Public)
+    POST /api/photos/<id>/like/ -> Toggle status (Auth only)
     Returns: { "is_liked": bool, "like_count": int }
     """
     try:
@@ -150,16 +157,20 @@ def toggle_like(request, photo_id):
     except UserPhoto.DoesNotExist:
         return Response({"detail": "Photo not found"}, status=404)
 
-    user = request.user
-    
+    # For GET requests (Public read)
     if request.method == 'GET':
-        is_liked = PhotoLike.objects.filter(user=user, photo=photo).exists()
+        # If user is anonymous, they can't have "liked" it, but we return count
+        is_liked = False
+        if request.user.is_authenticated:
+            is_liked = PhotoLike.objects.filter(user=request.user, photo=photo).exists()
+            
         return Response({
             "is_liked": is_liked,
             "like_count": photo.likes.count()
         })
 
-    # POST logic (Toggle)
+    # POST logic (Auth required - enforced by permission class)
+    user = request.user
     existing_like = PhotoLike.objects.filter(user=user, photo=photo).first()
     
     if existing_like:
@@ -181,11 +192,11 @@ def toggle_like(request, photo_id):
 # -------------------------------------------------------------
 class PhotoCommentListView(generics.ListCreateAPIView):
     """
-    GET /api/photos/<id>/comments/  -> List comments
-    POST /api/photos/<id>/comments/ -> Add comment
+    GET /api/photos/<id>/comments/  -> List comments (Public)
+    POST /api/photos/<id>/comments/ -> Add comment (Auth only)
     """
     serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated] # Or AllowAny for GET if public
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
     def get_queryset(self):
         photo_id = self.kwargs['photo_id']
@@ -207,9 +218,20 @@ class PhotoCommentDetailView(generics.DestroyAPIView):
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
 
-    def get_queryset(self):
-        # Only allow deleting own comments
-        return PhotoComment.objects.filter(user=self.request.user)
+    def delete(self, request, *args, **kwargs):
+        instance = self.get_object()
+        
+        # Check permissions: Author OR Photo Owner
+        is_author = instance.user == request.user
+        is_photo_owner = instance.photo.user == request.user
+        
+        if is_author or is_photo_owner:
+            return self.destroy(request, *args, **kwargs)
+        else:
+            return Response(
+                {"detail": "You do not have permission to delete this comment."},
+                status=status.HTTP_403_FORBIDDEN
+            )
 
 # -------------------------------------------------------------
 # GOOGLE AUTH LOGIN
@@ -232,7 +254,7 @@ def google_auth(request):
 
     try:
         # Verify Token
-        CLIENT_ID = "715843950550-diqg03nmv5dh756r366q9gq33bpu778p.apps.googleusercontent.com"  # Hardcoded for now based on user flow
+        CLIENT_ID = settings.GOOGLE_CLIENT_ID
         idinfo = id_token.verify_oauth2_token(token, google_requests.Request(), CLIENT_ID)
 
         # Get User Info

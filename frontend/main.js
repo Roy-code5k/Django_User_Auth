@@ -5,18 +5,26 @@ import { initPublicProfile } from './js/public_profile.js';
 
 console.log("Main script loaded");
 
-// Initialize Animations (Global, runs on all pages)
+// 1. Initialize Animations (Global - runs on all pages)
 console.log("Initializing animations...");
 initAnimations();
 
-// Initialize Auth (Landing page logic)
-console.log("Initializing auth...");
-initAuth();
+const path = window.location.pathname;
 
-// Initialize Dashboard (Dashboard logic)
-console.log("Initializing dashboard...");
-initDashboard();
+// 2. Initialize Auth (Landing Page Only)
+if (path === '/' || path === '/index.html') {
+    console.log("Initializing auth (Landing Page)...");
+    initAuth();
+}
 
-// Initialize Public Profile (Lightbox)
-console.log("Initializing Public Profile...");
-initPublicProfile();
+// 3. Initialize Dashboard (Dashboard Only)
+if (path.includes('/dashboard/')) {
+    console.log("Initializing dashboard...");
+    initDashboard();
+}
+
+// 4. Initialize Public Profile (Public Profile Only)
+if (path.includes('/u/')) {
+    console.log("Initializing Public Profile...");
+    initPublicProfile();
+}
