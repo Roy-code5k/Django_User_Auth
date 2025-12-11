@@ -109,25 +109,26 @@
 
     <!-- Instagram-style Lightbox Modal -->
     <div id="lightbox-modal"
-        class="fixed inset-0 z-50 bg-black/90 hidden flex items-center justify-center p-4 backdrop-blur-sm transition-opacity duration-300">
+        class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4 backdrop-blur-md transition-opacity duration-300">
         <!-- Close Button -->
         <button id="lightbox-close"
             class="absolute top-4 right-4 text-white/70 hover:text-red-500 transition-colors z-[60] p-2">
             <i class="fas fa-times text-3xl"></i>
         </button>
 
-        <!-- Main Card Container -->
-        <div class="flex flex-col lg:flex-row w-full max-w-6xl max-h-[90vh] bg-black rounded-xl overflow-hidden shadow-2xl relative"
+        <!-- Main Card Container (Glass Effect) -->
+        <div class="flex flex-col lg:flex-row w-full max-w-6xl max-h-[90vh] bg-gray-900/60 backdrop-blur-2xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative"
             onclick="event.stopPropagation()">
 
             <!-- Left: Image Area -->
             <div
-                class="flex-1 bg-black flex items-center justify-center relative min-h-[40vh] lg:min-h-full overflow-hidden">
+                class="flex-1 bg-black/20 flex items-center justify-center relative min-h-[40vh] lg:min-h-full overflow-hidden">
                 <img id="lightbox-img" src="" class="max-w-full max-h-[50vh] lg:max-h-full object-contain">
             </div>
 
             <!-- Right: Sidebar (User Info & Caption & Comments) -->
-            <div class="w-full lg:w-[400px] bg-[#151515] flex flex-col border-l border-white/10 lg:h-auto">
+            <div
+                class="w-full lg:w-[400px] bg-white/5 backdrop-blur-md flex flex-col border-l border-white/10 lg:h-auto">
 
                 <!-- 1. Header -->
                 <div class="p-4 border-b border-white/10 flex items-center gap-3 shrink-0">
@@ -169,7 +170,7 @@
                 </div>
 
                 <!-- 3. Actions Footer -->
-                <div class="p-4 border-t border-white/10 mt-auto bg-[#1a1a1a] shrink-0">
+                <div class="p-4 border-t border-white/10 mt-auto bg-black/20 shrink-0">
                     <div class="flex items-center gap-4 text-2xl mb-2 text-white">
                         <button id="like-btn" class="hover:scale-110 transition active:scale-95 focus:outline-none">
                             <i class="fas fa-infinity"></i>
