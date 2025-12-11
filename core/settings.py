@@ -25,7 +25,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings
 SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-this-in-production') 
-DEBUG = True
+
+# SECURITY WARNING: don't run with debug turned on in production!
+# Render sets 'RENDER' env var to 'true'
+DEBUG = 'RENDER' not in os.environ
 ALLOWED_HOSTS = ['*']
 
 
@@ -53,6 +56,7 @@ INSTALLED_APPS = [
 # ---------------------------------------------------------------
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware', # ⭐ Add Whitenoise here
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -176,9 +180,11 @@ STORAGES = {
         #     "addressing_style": SUPABASE_S3_ADDRESSING_STYLE,
         #     "custom_domain": SUPABASE_S3_CUSTOM_DOMAIN,
         # },
+    "default": {
+        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
     },
 }
 
