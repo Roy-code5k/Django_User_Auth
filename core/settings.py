@@ -166,8 +166,7 @@ AWS_S3_ADDRESSING_STYLE = "path"
 AWS_S3_CUSTOM_DOMAIN = 'tyeszjpfmtmftibxibwj.supabase.co/storage/v1/object/public/media'
 
 STORAGES = {
-    "default": {
-        "BACKEND": "storages.backends.s3boto3.S3Boto3Storage",
+    
         # "OPTIONS": {
         #     "access_key": SUPABASE_ACCESS_KEY_ID,
         #     "secret_key": SUPABASE_SECRET_ACCESS_KEY,
