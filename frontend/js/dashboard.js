@@ -1,4 +1,4 @@
-import { setButtonLoading, showToast } from './utils.js';
+import { setButtonLoading, showToast, authFetch } from './utils.js';
 
 export function initDashboard() {
     // -------------------------------------------------------------
@@ -16,6 +16,7 @@ export function initDashboard() {
         const linkedinInput = document.getElementById('linkedin-input');
         const githubInput = document.getElementById('github-input');
         const gmailInput = document.getElementById('gmail-input');
+        const genderInput = document.getElementById('gender-input');
 
         const avatarPreview = document.getElementById('avatar-preview');
         const avatarInput = document.getElementById('avatar-input');
@@ -98,9 +99,7 @@ export function initDashboard() {
         async function loadProfile() {
             console.log("Loading profile data...");
             try {
-                const res = await fetch('/api/profile/', {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
+                const res = await authFetch('/api/profile/');
                 console.log("Profile API status:", res.status);
 
                 if (res.ok) {
@@ -115,6 +114,7 @@ export function initDashboard() {
                     if (linkedinInput) linkedinInput.value = data.linkedin || '';
                     if (githubInput) githubInput.value = data.github || '';
                     if (gmailInput) gmailInput.value = data.gmail || '';
+                    if (genderInput) genderInput.value = data.gender || '';
 
                     if (data.avatar) avatarPreview.src = data.avatar;
 
@@ -224,9 +224,8 @@ export function initDashboard() {
                     // Upload as avatar
                     formData.append('avatar', blob, 'avatar.png');
 
-                    await fetch('/api/profile/', {
+                    await authFetch('/api/profile/', {
                         method: 'PATCH',
-                        headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
                     });
 
@@ -237,9 +236,8 @@ export function initDashboard() {
                     formData.append('image', blob, 'cropped.jpg');
                     formData.append('caption', galleryCaption);
 
-                    await fetch('/api/photos/', {
+                    await authFetch('/api/photos/', {
                         method: 'POST',
-                        headers: { 'Authorization': `Bearer ${token}` },
                         body: formData
                     });
 
@@ -288,16 +286,16 @@ export function initDashboard() {
                 instagram: instagramInput.value,
                 linkedin: linkedinInput.value,
                 github: githubInput.value,
-                gmail: gmailInput.value
+                gmail: gmailInput.value,
+                gender: genderInput.value
             };
 
             // Set loading state
             setButtonLoading(submitBtn, true);
 
-            await fetch('/api/profile/', {
+            await authFetch('/api/profile/', {
                 method: 'PATCH',
                 headers: {
-                    'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(payload)
@@ -329,9 +327,7 @@ export function initDashboard() {
 
         // Load Photos
         async function loadPhotos() {
-            const res = await fetch('/api/photos/', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const res = await authFetch('/api/photos/');
             if (res.ok) {
                 const photos = await res.json();
 
@@ -442,9 +438,8 @@ export function initDashboard() {
                 formData.append('image', blob, 'cropped.jpg');
                 formData.append('caption', document.getElementById('caption-input').value);
 
-                const res = await fetch('/api/photos/', {
+                const res = await authFetch('/api/photos/', {
                     method: 'POST',
-                    headers: { 'Authorization': `Bearer ${token}` },
                     body: formData
                 });
 
@@ -478,9 +473,8 @@ export function initDashboard() {
 
         // Delete Photo (Global function for onclick)
         window.deletePhoto = async (id) => {
-            await fetch(`/api/photos/${id}/`, {
-                method: 'DELETE',
-                headers: { 'Authorization': `Bearer ${token}` }
+            await authFetch(`/api/photos/${id}/`, {
+                method: 'DELETE'
             });
 
             loadPhotos();

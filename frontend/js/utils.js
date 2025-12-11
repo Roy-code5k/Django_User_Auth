@@ -53,3 +53,62 @@ export function showToast(message, type = 'success') {
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
+
+// GLOBAL UTILITY: LOGOUT
+export const logout = () => {
+    localStorage.clear();
+    window.location.href = '/';
+};
+
+// GLOBAL UTILITY: AUTHENTICATED FETCH
+export async function authFetch(url, options = {}) {
+    let token = localStorage.getItem('access');
+    if (!token) {
+        logout();
+        return Promise.reject("No token");
+    }
+
+    // Inject Header
+    options.headers = options.headers || {};
+    // Handle if headers is NOT a Headers object (simple object)
+    if (!options.headers['Authorization']) {
+        options.headers['Authorization'] = `Bearer ${token}`;
+    }
+
+    let response = await fetch(url, options);
+
+    // Handle 401 (Unauthorized/Expired)
+    if (response.status === 401) {
+        console.warn("Access token expired. Refreshing...");
+        const refresh = localStorage.getItem('refresh');
+
+        if (!refresh) {
+            logout();
+            return response;
+        }
+
+        try {
+            const refreshRes = await fetch('/api/token/refresh/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh })
+            });
+
+            if (refreshRes.ok) {
+                const data = await refreshRes.json();
+                localStorage.setItem('access', data.access);
+
+                // Retry original request with NEW token
+                options.headers['Authorization'] = `Bearer ${data.access}`;
+                response = await fetch(url, options);
+            } else {
+                console.error("Session expired completely.");
+                logout();
+            }
+        } catch (err) {
+            console.error("Refresh failed:", err);
+            logout();
+        }
+    }
+    return response;
+}

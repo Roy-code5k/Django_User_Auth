@@ -150,6 +150,14 @@
             border-color: #00b4d8;
         }
 
+        /* Fix for select dropdown options visibility */
+        .input option {
+            background-color: #05181C;
+            /* Dark background matching body */
+            color: white;
+            /* White text */
+        }
+
         /* ------------------------------------------------------------
    BUTTONS USED IN POPUP
 ------------------------------------------------------------- */

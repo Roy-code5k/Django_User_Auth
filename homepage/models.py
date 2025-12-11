@@ -28,6 +28,14 @@ class Profile(models.Model):
     github = models.URLField(blank=True, validators=[validate_github])
     gmail = models.EmailField(blank=True)
 
+    GENDER_CHOICES = [
+        ('M', 'Male'),
+        ('F', 'Female'),
+        ('O', 'Other'),
+        ('N', 'Prefer not to say'),
+    ]
+    gender = models.CharField(max_length=1, choices=GENDER_CHOICES, blank=True, null=True)
+
     def __str__(self):
         return f"{self.user.username}'s Profile"
 
@@ -36,6 +44,18 @@ class Profile(models.Model):
         import re
         match = re.match(r"([a-zA-Z]+)", self.user.username)
         return match.group(1).capitalize() if match else self.user.username
+
+    @property
+    def pronouns(self):
+        PRONOUN_MAP = {
+            'M': '(he/him)',
+            'F': '(she/her)',
+            'O': '(they/them)',
+            'N': '',
+            None: '',
+            '': ''
+        }
+        return PRONOUN_MAP.get(self.gender, '')
 
 class UserPhoto(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='photos')

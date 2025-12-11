@@ -36,7 +36,12 @@
             </div>
 
             <!-- Title & Desc -->
-            <h1 class="text-4xl font-black tracking-tight mb-2">{{ user_obj.profile.title }}</h1>
+            <h1 class="text-4xl font-black tracking-tight mb-2">
+                {{ user_obj.profile.title }}
+                {% if user_obj.profile.pronouns %}
+                <span class="text-lg text-gray-400 font-normal align-middle ml-2">{{ user_obj.profile.pronouns }}</span>
+                {% endif %}
+            </h1>
             <p class="text-lg text-gray-300 max-w-2xl mx-auto leading-relaxed">{{ user_obj.profile.description }}</p>
 
             <!-- Social / Contact -->
