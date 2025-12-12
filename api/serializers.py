@@ -4,17 +4,26 @@ from django.contrib.auth.password_validation import validate_password
 from django.utils.text import slugify
 
 
-from homepage.models import Profile, UserPhoto, PhotoLike, PhotoComment, ChatMessage
+from homepage.models import (
+    Profile,
+    UserPhoto,
+    PhotoLike,
+    PhotoComment,
+    ChatMessage,
+    Community,
+    CommunityMembership,
+)
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
     avatar = serializers.SerializerMethodField()
     is_me = serializers.SerializerMethodField()
+    community_id = serializers.IntegerField(source='community.id', read_only=True)
 
     class Meta:
         model = ChatMessage
-        fields = ['id', 'username', 'avatar', 'text', 'created_at', 'is_me']
-        read_only_fields = ['id', 'username', 'avatar', 'created_at', 'is_me']
+        fields = ['id', 'username', 'avatar', 'text', 'created_at', 'is_me', 'community_id']
+        read_only_fields = ['id', 'username', 'avatar', 'created_at', 'is_me', 'community_id']
 
     def get_avatar(self, obj):
         if hasattr(obj.user, 'profile') and obj.user.profile.avatar:
@@ -26,6 +35,50 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.user == request.user
         return False
+
+class CommunitySerializer(serializers.ModelSerializer):
+    member_count = serializers.SerializerMethodField()
+    is_admin = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Community
+        fields = ['id', 'name', 'slug', 'is_private', 'created_at', 'member_count', 'is_admin']
+        read_only_fields = ['id', 'slug', 'created_at', 'member_count', 'is_admin']
+
+    def get_member_count(self, obj):
+        return obj.memberships.count()
+
+    def get_is_admin(self, obj):
+        request = self.context.get('request')
+        if not request or not request.user.is_authenticated:
+            return False
+        return CommunityMembership.objects.filter(
+            community=obj,
+            user=request.user,
+            role=CommunityMembership.ROLE_ADMIN,
+        ).exists()
+
+
+class CommunityMemberSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='user.username', read_only=True)
+    display_name = serializers.SerializerMethodField()
+    avatar = serializers.SerializerMethodField()
+
+    class Meta:
+        model = CommunityMembership
+        fields = ['username', 'display_name', 'avatar', 'role', 'added_at']
+        read_only_fields = ['username', 'display_name', 'avatar', 'role', 'added_at']
+
+    def get_display_name(self, obj):
+        if hasattr(obj.user, 'profile'):
+            return obj.user.profile.display_name
+        return obj.user.username
+
+    def get_avatar(self, obj):
+        if hasattr(obj.user, 'profile') and obj.user.profile.avatar:
+            return obj.user.profile.avatar.url
+        return None
+
 
 class ProfileSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)

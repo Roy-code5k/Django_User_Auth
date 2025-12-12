@@ -1,5 +1,7 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.db.models import UniqueConstraint
+from django.utils.text import slugify
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -89,10 +91,63 @@ class PhotoComment(models.Model):
     def __str__(self):
         return f"{self.user.username} on {self.photo.id}: {self.text[:20]}"
 
+class Community(models.Model):
+    name = models.CharField(max_length=100)
+    slug = models.SlugField(max_length=120, unique=True, blank=True)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='communities_created')
+    is_private = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.name)[:110] or 'community'
+            slug = base
+            i = 1
+            while Community.objects.filter(slug=slug).exclude(pk=self.pk).exists():
+                slug = f"{base}-{i}"
+                i += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return self.name
+
+
+class CommunityMembership(models.Model):
+    ROLE_ADMIN = 'admin'
+    ROLE_MEMBER = 'member'
+    ROLE_CHOICES = [
+        (ROLE_ADMIN, 'Admin'),
+        (ROLE_MEMBER, 'Member'),
+    ]
+
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, related_name='memberships')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='community_memberships')
+    role = models.CharField(max_length=10, choices=ROLE_CHOICES, default=ROLE_MEMBER)
+    added_by = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='community_members_added',
+    )
+    added_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            UniqueConstraint(fields=['community', 'user'], name='unique_community_user_membership'),
+        ]
+
+    def __str__(self):
+        return f"{self.user.username} in {self.community.slug} ({self.role})"
+
+
 class ChatMessage(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_messages')
+    community = models.ForeignKey(Community, on_delete=models.CASCADE, null=True, blank=True, related_name='messages')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return f"{self.user.username}: {self.text[:20]}"
+        scope = self.community.slug if self.community_id else 'global'
+        return f"[{scope}] {self.user.username}: {self.text[:20]}"

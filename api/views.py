@@ -1,10 +1,11 @@
-from django.shortcuts import render
+from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.models import User
 
 from rest_framework import generics, status, permissions
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import PermissionDenied
 
 from rest_framework_simplejwt.tokens import RefreshToken
 
@@ -313,10 +314,10 @@ def google_auth(request):
         return Response({"detail": "Google Auth Failed"}, status=500)
 
 # -------------------------------------------------------------
-# COMMUNITY CHAT
+# COMMUNITY CHAT (GLOBAL)
 # -------------------------------------------------------------
-from homepage.models import ChatMessage
-from .serializers import ChatMessageSerializer
+from homepage.models import ChatMessage, Community, CommunityMembership
+from .serializers import ChatMessageSerializer, CommunitySerializer, CommunityMemberSerializer
 
 class ChatListCreateView(generics.ListCreateAPIView):
     """
@@ -327,9 +328,8 @@ class ChatListCreateView(generics.ListCreateAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Return last 50 messages (ordered by creation)
-        # Note: We slice in python or use logic to get last N
-        return ChatMessage.objects.all().order_by('-created_at')[:50]
+        # Global chat = messages with no community
+        return ChatMessage.objects.filter(community__isnull=True).order_by('-created_at')[:50]
 
     def list(self, request, *args, **kwargs):
         # We want oldest first for chat flow, so fetch recent desc -> reverse
@@ -349,8 +349,132 @@ class ChatDetailView(generics.DestroyAPIView):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        # Only allow deleting own messages
-        return ChatMessage.objects.filter(user=self.request.user)
+        # Only allow deleting own *global* messages
+        return ChatMessage.objects.filter(user=self.request.user, community__isnull=True)
+
+
+# -------------------------------------------------------------
+# PRIVATE COMMUNITIES
+# -------------------------------------------------------------
+class CommunityListCreateView(generics.ListCreateAPIView):
+    serializer_class = CommunitySerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return (
+            Community.objects.filter(memberships__user=self.request.user)
+            .distinct()
+            .order_by('name')
+        )
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['request'] = self.request
+        return ctx
+
+    def perform_create(self, serializer):
+        community = serializer.save(created_by=self.request.user)
+        CommunityMembership.objects.create(
+            community=community,
+            user=self.request.user,
+            role=CommunityMembership.ROLE_ADMIN,
+            added_by=self.request.user,
+        )
+
+
+class CommunityMembersView(generics.ListCreateAPIView):
+    serializer_class = CommunityMemberSerializer
+    permission_classes = [IsAuthenticated]
+
+    def _get_community(self):
+        return get_object_or_404(Community, pk=self.kwargs['community_id'])
+
+    def _require_member(self, community):
+        if not CommunityMembership.objects.filter(community=community, user=self.request.user).exists():
+            raise PermissionDenied('You are not a member of this community.')
+
+    def _require_admin(self, community):
+        if not CommunityMembership.objects.filter(
+            community=community,
+            user=self.request.user,
+            role=CommunityMembership.ROLE_ADMIN,
+        ).exists():
+            raise PermissionDenied('Only community admins can add members.')
+
+    def get_queryset(self):
+        community = self._get_community()
+        self._require_member(community)
+        return CommunityMembership.objects.filter(community=community).select_related('user', 'user__profile').order_by('user__username')
+
+    def create(self, request, *args, **kwargs):
+        community = self._get_community()
+        self._require_admin(community)
+
+        username = (request.data.get('username') or '').strip()
+        if not username:
+            return Response({'detail': 'username is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(username__iexact=username)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        membership, created = CommunityMembership.objects.get_or_create(
+            community=community,
+            user=user,
+            defaults={'added_by': request.user, 'role': CommunityMembership.ROLE_MEMBER},
+        )
+
+        if not created:
+            return Response({'detail': 'User is already a member'}, status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = self.get_serializer(membership)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CommunityChatListCreateView(generics.ListCreateAPIView):
+    serializer_class = ChatMessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def _get_community(self):
+        return get_object_or_404(Community, pk=self.kwargs['community_id'])
+
+    def _require_member(self, community):
+        if not CommunityMembership.objects.filter(community=community, user=self.request.user).exists():
+            raise PermissionDenied('You are not a member of this community.')
+
+    def get_queryset(self):
+        community = self._get_community()
+        self._require_member(community)
+        return ChatMessage.objects.filter(community=community).order_by('-created_at')[:50]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(reversed(queryset), many=True)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        community = self._get_community()
+        self._require_member(community)
+        serializer.save(user=self.request.user, community=community)
+
+
+class CommunityChatDetailView(generics.DestroyAPIView):
+    serializer_class = ChatMessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def _get_community(self):
+        return get_object_or_404(Community, pk=self.kwargs['community_id'])
+
+    def _require_member(self, community):
+        if not CommunityMembership.objects.filter(community=community, user=self.request.user).exists():
+            raise PermissionDenied('You are not a member of this community.')
+
+    def get_queryset(self):
+        community = self._get_community()
+        self._require_member(community)
+        # Only allow deleting your own messages within this community
+        return ChatMessage.objects.filter(community=community, user=self.request.user)
 
 # -------------------------------------------------------------
 # USER SEARCH

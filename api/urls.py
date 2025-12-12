@@ -4,7 +4,14 @@ from .views import (
     RegisterView, resolve_username, me_view, 
     ProfileDetailView, UserPhotoListCreateView, UserPhotoDetailView,
     toggle_like, PhotoCommentListView, PhotoCommentDetailView,
-    google_auth, ChatListCreateView, ChatDetailView, UserSearchView
+    google_auth,
+    ChatListCreateView,
+    ChatDetailView,
+    UserSearchView,
+    CommunityListCreateView,
+    CommunityMembersView,
+    CommunityChatListCreateView,
+    CommunityChatDetailView,
 )
 
 urlpatterns = [
@@ -28,9 +35,15 @@ urlpatterns = [
     # Google Auth
     path('auth/google/', google_auth, name='google-auth'),
 
-    # Community Chat
+    # Global Chat
     path('chat/', ChatListCreateView.as_view(), name='api-chat-list'),
     path('chat/<int:pk>/', ChatDetailView.as_view(), name='api-chat-detail'),
+
+    # Private Communities
+    path('communities/', CommunityListCreateView.as_view(), name='api-community-list'),
+    path('communities/<int:community_id>/members/', CommunityMembersView.as_view(), name='api-community-members'),
+    path('communities/<int:community_id>/chat/', CommunityChatListCreateView.as_view(), name='api-community-chat-list'),
+    path('communities/<int:community_id>/chat/<int:pk>/', CommunityChatDetailView.as_view(), name='api-community-chat-detail'),
 
     # User Search
     path('search/users/', UserSearchView.as_view(), name='api-user-search'),

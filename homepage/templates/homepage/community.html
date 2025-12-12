@@ -20,30 +20,84 @@
     <!-- Navbar -->
     <nav
         class="fixed top-0 w-full z-50 glass-card border-b border-white/10 px-6 py-4 flex justify-between items-center shrink-0">
-        <div class="flex items-center gap-4">
-
-            <div class="font-bold text-xl tracking-tight">Community Chat 🌍</div>
+        <div class="flex items-center gap-4 min-w-0">
+            <div class="font-bold text-xl tracking-tight whitespace-nowrap">Chats</div>
+            <select id="community-select"
+                class="input bg-black/30 border-white/10 rounded-full px-4 py-2 text-sm min-w-[220px] max-w-[50vw]">
+                <option value="global">Global Chat</option>
+            </select>
         </div>
-        <div>
-            <!-- Right side placeholder -->
+        <div class="flex items-center gap-3">
+            <button id="open-create-community" class="btn-secondary text-sm">
+                <i class="fas fa-plus mr-1"></i>Create Community
+            </button>
         </div>
     </nav>
+
+    <!-- Create Community Modal -->
+    <div id="create-community-modal" class="modal hidden">
+        <div class="modal-panel">
+            <h3 class="text-xl font-bold mb-4">Create a private community</h3>
+            <form id="create-community-form" class="space-y-3">
+                <input id="community-name-input" class="input" placeholder="Community name" required />
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary flex-1">Create</button>
+                    <button type="button" id="close-create-community" class="btn-secondary flex-1">Cancel</button>
+                </div>
+                <p id="create-community-error" class="text-red-400 text-sm"></p>
+            </form>
+        </div>
+    </div>
 
     <!-- Chat Container -->
     <div class="flex-1 pt-24 pb-24 px-4 max-w-5xl mx-auto w-full relative z-10 flex flex-col">
 
         <!-- Glass Background Area -->
         <div
-            class="flex-1 flex flex-col bg-gray-900/40 backdrop-blur-md rounded-3xl border border-white/5 shadow-inner overflow-hidden relative">
+            class="flex-1 flex flex-col md:flex-row bg-gray-900/40 backdrop-blur-md rounded-3xl border border-white/5 shadow-inner overflow-hidden relative">
 
-            <!-- Messages Area (Scrollable inside glass) -->
-            <div id="chat-messages" class="flex-1 space-y-4 overflow-y-auto p-4 md:p-6 custom-scrollbar scroll-smooth">
-                <!-- Messages injected via JS -->
-                <div class="text-center text-gray-400 py-10">
-                    <i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i>
-                    <p>Loading conversation...</p>
+            <!-- Chat Column -->
+            <div class="flex-1 flex flex-col min-w-0">
+                <div class="px-4 md:px-6 py-4 border-b border-white/10 flex items-center justify-between gap-3">
+                    <div class="text-sm text-gray-300 truncate">
+                        <span class="text-gray-500">Chat:</span>
+                        <span id="community-title" class="font-bold">Global Chat</span>
+                    </div>
+                    <div class="text-xs text-gray-500" id="community-meta"></div>
+                </div>
+
+                <!-- Messages Area (Scrollable inside glass) -->
+                <div id="chat-messages" class="flex-1 space-y-4 overflow-y-auto p-4 md:p-6 custom-scrollbar scroll-smooth">
+                    <!-- Messages injected via JS -->
+                    <div class="text-center text-gray-400 py-10">
+                        <i class="fas fa-circle-notch fa-spin text-2xl mb-2"></i>
+                        <p>Loading conversation...</p>
+                    </div>
                 </div>
             </div>
+
+            <!-- Members Column -->
+            <aside id="members-panel" class="w-full md:w-80 border-t md:border-t-0 md:border-l border-white/10 p-4 md:p-5">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="font-bold">Members</h3>
+                    <span id="members-count" class="text-xs text-gray-500"></span>
+                </div>
+
+                <div id="members-global-hint" class="text-sm text-gray-400 hidden">
+                    Global chat is open to all logged-in users.
+                </div>
+
+                <div id="members-private-ui">
+                    <div class="relative mb-3">
+                        <input id="member-search-input" class="input pr-10" placeholder="Search users to add..." autocomplete="off" />
+                        <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-500"></i>
+                    </div>
+
+                    <div id="member-search-results" class="glass-card rounded-xl overflow-hidden hidden border border-white/10 mb-4"></div>
+
+                    <div id="members-list" class="space-y-2 max-h-[50vh] overflow-y-auto custom-scrollbar pr-1"></div>
+                </div>
+            </aside>
         </div>
 
     </div>
