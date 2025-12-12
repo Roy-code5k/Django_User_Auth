@@ -408,7 +408,7 @@ from django.db.models import Count, Q
 
 from homepage.models import (
     ChatMessage,
-    Community, CommunityMembership, Conversation, DirectMessage, MessageReaction
+    Community, CommunityMembership, Conversation, DirectMessage, MessageReaction, CommunityMessageReaction
 )
 from .serializers import (
     ChatMessageSerializer,
@@ -782,3 +782,92 @@ def message_reaction_view(request, message_id):
         return Response({
             'deleted': deleted > 0
         }, status=status.HTTP_200_OK)
+# Add these two functions to the end of api/views.py
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def chat_reaction_view(request, message_id):
+    """Handle reactions on global chat messages"""
+    message = get_object_or_404(ChatMessage, pk=message_id)
+    
+    # Global chat is open to all authenticated users
+    if message.community:
+        raise PermissionDenied('This endpoint is for global chat only.')
+    
+    if request.method == 'POST':
+        emoji = request.data.get('emoji', '').strip()
+        if not emoji:
+            return Response({'detail': 'emoji is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Delete any existing reaction to enforce one reaction per user
+        CommunityMessageReaction.objects.filter(
+            message=message,
+            user=request.user
+        ).delete()
+        
+        # Create new reaction
+        CommunityMessageReaction.objects.create(
+            message=message,
+            user=request.user,
+            emoji=emoji
+        )
+        
+        return Response({'emoji': emoji, 'created': True}, status=status.HTTP_201_CREATED)
+    
+    elif request.method == 'DELETE':
+        emoji = request.data.get('emoji', '').strip()
+        if not emoji:
+            return Response({'detail': 'emoji is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        deleted = CommunityMessageReaction.objects.filter(
+            message=message,
+            user=request.user,
+            emoji=emoji
+        ).delete()[0]
+        
+        return Response({'deleted': deleted > 0}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def community_chat_reaction_view(request, community_id, message_id):
+    """Handle reactions on community chat messages"""
+    community = get_object_or_404(Community, pk=community_id)
+    message = get_object_or_404(ChatMessage, pk=message_id, community=community)
+    
+    # Check if user is a member
+    if not CommunityMembership.objects.filter(community=community, user=request.user).exists():
+        raise PermissionDenied('You are not a member of this community.')
+    
+    if request.method == 'POST':
+        emoji = request.data.get('emoji', '').strip()
+        if not emoji:
+            return Response({'detail': 'emoji is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Delete any existing reaction to enforce one reaction per user
+        CommunityMessageReaction.objects.filter(
+            message=message,
+            user=request.user
+        ).delete()
+        
+        # Create new reaction
+        CommunityMessageReaction.objects.create(
+            message=message,
+            user=request.user,
+            emoji=emoji
+        )
+        
+        return Response({'emoji': emoji, 'created': True}, status=status.HTTP_201_CREATED)
+    
+    elif request.method == 'DELETE':
+        emoji = request.data.get('emoji', '').strip()
+        if not emoji:
+            return Response({'detail': 'emoji is required'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        deleted = CommunityMessageReaction.objects.filter(
+            message=message,
+            user=request.user,
+            emoji=emoji
+        ).delete()[0]
+        
+        return Response({'deleted': deleted > 0}, status=status.HTTP_200_OK)

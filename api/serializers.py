@@ -18,6 +18,7 @@ from homepage.models import (
     Experience,
     Skill,
     MessageReaction,
+    CommunityMessageReaction,
 )
 
 
@@ -26,11 +27,12 @@ class ChatMessageSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
     is_me = serializers.SerializerMethodField()
     community_id = serializers.IntegerField(source='community.id', read_only=True)
+    reactions = serializers.SerializerMethodField()
 
     class Meta:
         model = ChatMessage
-        fields = ['id', 'username', 'avatar', 'text', 'created_at', 'is_me', 'community_id']
-        read_only_fields = ['id', 'username', 'avatar', 'created_at', 'is_me', 'community_id']
+        fields = ['id', 'username', 'avatar', 'text', 'created_at', 'is_me', 'community_id', 'reactions']
+        read_only_fields = ['id', 'username', 'avatar', 'created_at', 'is_me', 'community_id', 'reactions']
 
     def get_avatar(self, obj):
         if hasattr(obj.user, 'profile') and obj.user.profile.avatar:
@@ -42,6 +44,25 @@ class ChatMessageSerializer(serializers.ModelSerializer):
         if request and request.user.is_authenticated:
             return obj.user == request.user
         return False
+    
+    def get_reactions(self, obj):
+        from collections import defaultdict
+        reaction_groups = defaultdict(list)
+        
+        for reaction in obj.reactions.all():
+            reaction_groups[reaction.emoji].append({
+                'username': reaction.user.username,
+                'is_me': reaction.user == self.context.get('request').user if self.context.get('request') else False
+            })
+        
+        return [
+            {
+                'emoji': emoji,
+                'count': len(users),
+                'users': users
+            }
+            for emoji, users in reaction_groups.items()
+        ]
 
 class CommunitySerializer(serializers.ModelSerializer):
     member_count = serializers.SerializerMethodField()
