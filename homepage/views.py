@@ -25,3 +25,6 @@ def dashboard(request):
 def community_view(request):
     return render(request, "homepage/community.html")
 
+
+def direct_messages_view(request):
+    return render(request, "homepage/direct_messages.html")

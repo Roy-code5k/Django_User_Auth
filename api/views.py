@@ -316,8 +316,16 @@ def google_auth(request):
 # -------------------------------------------------------------
 # COMMUNITY CHAT (GLOBAL)
 # -------------------------------------------------------------
-from homepage.models import ChatMessage, Community, CommunityMembership
-from .serializers import ChatMessageSerializer, CommunitySerializer, CommunityMemberSerializer
+from django.db.models import Count, Q
+
+from homepage.models import ChatMessage, Community, CommunityMembership, Conversation, DirectMessage
+from .serializers import (
+    ChatMessageSerializer,
+    CommunitySerializer,
+    CommunityMemberSerializer,
+    DirectThreadSerializer,
+    DirectMessageSerializer,
+)
 
 class ChatListCreateView(generics.ListCreateAPIView):
     """
@@ -491,10 +499,10 @@ class UserSearchView(generics.ListAPIView):
 
     def get_queryset(self):
         query = self.request.query_params.get('q', '').strip()
-        
+
         if not query or len(query) < 2:
             return User.objects.none()
-        
+
         # Search by username (case-insensitive, partial match)
         # Exclude current user from results
         return User.objects.filter(
@@ -503,3 +511,119 @@ class UserSearchView(generics.ListAPIView):
             id=self.request.user.id
         ).select_related('profile')[:10]  # Limit to 10 results
 
+
+# -------------------------------------------------------------
+# DIRECT MESSAGES (1:1)
+# -------------------------------------------------------------
+class DirectThreadListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/dm/threads/            -> list user's threads (1:1 conversations)
+    POST /api/dm/threads/ {username} -> create/get 1:1 thread with username
+
+    Notes:
+    - We use the existing Conversation model/table.
+    - A DM thread is a Conversation with exactly 2 participants.
+    """
+
+    serializer_class = DirectThreadSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Important: we must count *all* participants, not only the join rows filtered by the current user.
+        # We do this via conditional aggregates.
+        return (
+            Conversation.objects
+            .annotate(
+                pcount=Count('participants', distinct=True),
+                me_count=Count('participants', filter=Q(participants=self.request.user), distinct=True),
+            )
+            .filter(me_count=1, pcount=2)
+            .prefetch_related('participants', 'participants__profile', 'messages')
+            .order_by('-updated_at')
+        )
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['request'] = self.request
+        return ctx
+
+    def create(self, request, *args, **kwargs):
+        username = (request.data.get('username') or '').strip()
+        if not username:
+            return Response({'detail': 'username is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            other = User.objects.get(username__iexact=username)
+        except User.DoesNotExist:
+            return Response({'detail': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        if other == request.user:
+            return Response({'detail': 'Cannot message yourself'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Find existing 1:1 conversation (exactly two participants).
+        existing = (
+            Conversation.objects
+            .annotate(
+                pcount=Count('participants', distinct=True),
+                me_count=Count('participants', filter=Q(participants=request.user), distinct=True),
+                other_count=Count('participants', filter=Q(participants=other), distinct=True),
+            )
+            .filter(me_count=1, other_count=1, pcount=2)
+            .order_by('-updated_at')
+            .first()
+        )
+
+        if existing:
+            serializer = self.get_serializer(existing)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        convo = Conversation.objects.create()
+        convo.participants.add(request.user, other)
+        serializer = self.get_serializer(convo)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class DirectMessageListCreateView(generics.ListCreateAPIView):
+    """
+    GET  /api/dm/threads/<id>/messages/ -> list last 50 messages (oldest first)
+    POST /api/dm/threads/<id>/messages/ -> send message
+    """
+
+    serializer_class = DirectMessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def _get_thread(self):
+        thread = get_object_or_404(Conversation, pk=self.kwargs['thread_id'])
+        if not thread.participants.filter(pk=self.request.user.pk).exists():
+            raise PermissionDenied('You are not a participant in this thread.')
+        return thread
+
+    def get_queryset(self):
+        thread = self._get_thread()
+        return DirectMessage.objects.filter(conversation=thread).order_by('-created_at')[:50]
+
+    def list(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(reversed(queryset), many=True)
+        return Response(serializer.data)
+
+    def get_serializer_context(self):
+        ctx = super().get_serializer_context()
+        ctx['request'] = self.request
+        return ctx
+
+    def perform_create(self, serializer):
+        thread = self._get_thread()
+        serializer.save(conversation=thread, sender=self.request.user)
+
+
+class DirectMessageDetailView(generics.DestroyAPIView):
+    """
+    DELETE /api/dm/messages/<id>/ -> delete your own DM message
+    """
+
+    serializer_class = DirectMessageSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return DirectMessage.objects.filter(sender=self.request.user)

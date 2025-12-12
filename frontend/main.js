@@ -3,6 +3,7 @@ import { initAuth } from './js/signup_signin.js';
 import { initDashboard } from './js/dashboard.js';
 import { initPublicProfile } from './js/public_profile.js';
 import { initCommunity } from './js/community.js'; // Import Community
+import { initDirectMessages } from './js/direct_messages.js';
 
 console.log("Main script loaded");
 
@@ -33,4 +34,9 @@ if (path.includes('/u/')) {
 // 5. Initialize Community (Chat Only)
 if (path.includes('/community/')) {
     initCommunity();
+}
+
+// 6. Initialize Direct Messages (1:1)
+if (path.includes('/messages/')) {
+    initDirectMessages();
 }

@@ -2,6 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.db.models import UniqueConstraint
 from django.utils.text import slugify
+from django.utils import timezone
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -151,3 +152,45 @@ class ChatMessage(models.Model):
     def __str__(self):
         scope = self.community.slug if self.community_id else 'global'
         return f"[{scope}] {self.user.username}: {self.text[:20]}"
+
+
+class Conversation(models.Model):
+    """A conversation between users.
+
+    The database already contains these tables:
+      - homepage_conversation
+      - homepage_conversation_participants
+      - homepage_directmessage
+
+    For 1:1 messaging we treat conversations with exactly 2 participants as DMs.
+    """
+
+    participants = models.ManyToManyField(User, related_name='conversations')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def other_user(self, me):
+        # For 1:1 conversations, return the other participant.
+        if not me:
+            return None
+        qs = self.participants.exclude(pk=me.pk)
+        return qs.first()
+
+    def __str__(self):
+        return f"Conversation {self.pk}"
+
+
+class DirectMessage(models.Model):
+    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dm_messages_sent')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    is_read = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
+        # Keep conversation ordering fresh for inbox sorting.
+        Conversation.objects.filter(pk=self.conversation_id).update(updated_at=timezone.now())
+
+    def __str__(self):
+        return f"[DM {self.conversation_id}] {self.sender.username}: {self.text[:20]}"

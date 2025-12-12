@@ -12,6 +12,8 @@ from homepage.models import (
     ChatMessage,
     Community,
     CommunityMembership,
+    Conversation,
+    DirectMessage,
 )
 
 class ChatMessageSerializer(serializers.ModelSerializer):
@@ -78,6 +80,61 @@ class CommunityMemberSerializer(serializers.ModelSerializer):
         if hasattr(obj.user, 'profile') and obj.user.profile.avatar:
             return obj.user.profile.avatar.url
         return None
+
+
+class DirectMessageSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(source='sender.username', read_only=True)
+    avatar = serializers.SerializerMethodField()
+    is_me = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DirectMessage
+        fields = ['id', 'username', 'avatar', 'text', 'created_at', 'is_me']
+        read_only_fields = ['id', 'username', 'avatar', 'created_at', 'is_me']
+
+    def get_avatar(self, obj):
+        if hasattr(obj.sender, 'profile') and obj.sender.profile.avatar:
+            return obj.sender.profile.avatar.url
+        return None
+
+    def get_is_me(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.sender == request.user
+        return False
+
+
+class DirectThreadSerializer(serializers.ModelSerializer):
+    other_user = serializers.SerializerMethodField()
+    last_message = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Conversation
+        fields = ['id', 'other_user', 'updated_at', 'last_message']
+        read_only_fields = ['id', 'other_user', 'updated_at', 'last_message']
+
+    def get_other_user(self, obj):
+        request = self.context.get('request')
+        me = request.user if request and request.user.is_authenticated else None
+        other = obj.other_user(me) if me else None
+        if not other:
+            return None
+        return {
+            'username': other.username,
+            'display_name': getattr(other, 'profile', None).display_name if hasattr(other, 'profile') else other.username,
+            'avatar': other.profile.avatar.url if hasattr(other, 'profile') and other.profile.avatar else None,
+            'profile_url': f'/u/{other.username}/',
+        }
+
+    def get_last_message(self, obj):
+        last = obj.messages.order_by('-created_at').first()
+        if not last:
+            return None
+        return {
+            'text': last.text,
+            'created_at': last.created_at,
+            'username': last.sender.username,
+        }
 
 
 class ProfileSerializer(serializers.ModelSerializer):

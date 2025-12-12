@@ -12,6 +12,9 @@ from .views import (
     CommunityMembersView,
     CommunityChatListCreateView,
     CommunityChatDetailView,
+    DirectThreadListCreateView,
+    DirectMessageListCreateView,
+    DirectMessageDetailView,
 )
 
 urlpatterns = [
@@ -44,6 +47,11 @@ urlpatterns = [
     path('communities/<int:community_id>/members/', CommunityMembersView.as_view(), name='api-community-members'),
     path('communities/<int:community_id>/chat/', CommunityChatListCreateView.as_view(), name='api-community-chat-list'),
     path('communities/<int:community_id>/chat/<int:pk>/', CommunityChatDetailView.as_view(), name='api-community-chat-detail'),
+
+    # Direct Messages (1:1)
+    path('dm/threads/', DirectThreadListCreateView.as_view(), name='api-dm-threads'),
+    path('dm/threads/<int:thread_id>/messages/', DirectMessageListCreateView.as_view(), name='api-dm-thread-messages'),
+    path('dm/messages/<int:pk>/', DirectMessageDetailView.as_view(), name='api-dm-message-delete'),
 
     # User Search
     path('search/users/', UserSearchView.as_view(), name='api-user-search'),
