@@ -498,6 +498,103 @@ export function initDashboard() {
             showToast('Photo deleted successfully!', 'success');
         };
 
+        // -------------------------------------------------------------
+        // USER SEARCH
+        // -------------------------------------------------------------
+        const searchInput = document.getElementById('user-search-input');
+        const searchDropdown = document.getElementById('search-dropdown');
+        let searchTimeout = null;
+
+        async function performSearch(query) {
+            if (!query || query.trim().length < 2) {
+                searchDropdown.classList.add('hidden');
+                return;
+            }
+
+            try {
+                const response = await authFetch(`/api/search/users/?q=${encodeURIComponent(query.trim())}`);
+                if (!response.ok) throw new Error();
+
+                const users = await response.json();
+                renderSearchResults(users);
+            } catch (err) {
+                console.error('Search failed:', err);
+                searchDropdown.classList.add('hidden');
+            }
+        }
+
+        function renderSearchResults(users) {
+            if (users.length === 0) {
+                searchDropdown.innerHTML = `
+                    <div class="px-4 py-6 text-center text-gray-500 text-sm">
+                        <i class="fas fa-user-slash mb-2 text-2xl"></i>
+                        <p>No users found</p>
+                    </div>
+                `;
+                searchDropdown.classList.remove('hidden');
+                return;
+            }
+
+            searchDropdown.innerHTML = users.map(user => `
+                <div class="flex items-center gap-3 px-4 py-3 hover:bg-white/5 cursor-pointer transition user-result" data-url="${user.profile_url}">
+                    <!-- Avatar (32px circle) -->
+                    <div class="w-8 h-8 rounded-full bg-gray-700 overflow-hidden border border-white/20 shrink-0">
+                        ${user.avatar
+                    ? `<img src="${user.avatar}" class="w-full h-full object-cover" alt="${user.username}">`
+                    : `<div class="w-full h-full bg-purple-500 flex items-center justify-center text-xs font-bold text-white">${user.username[0].toUpperCase()}</div>`
+                }
+                    </div>
+                    
+                    <!-- Names -->
+                    <div class="flex-1 min-w-0">
+                        <div class="font-bold text-white text-sm truncate">${user.display_name}</div>
+                        <div class="text-gray-500 text-xs truncate">@${user.username}</div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click listeners to results
+            searchDropdown.querySelectorAll('.user-result').forEach(result => {
+                result.addEventListener('click', (e) => {
+                    const url = e.currentTarget.getAttribute('data-url');
+                    window.open(url, '_blank');
+                });
+            });
+
+            searchDropdown.classList.remove('hidden');
+        }
+
+        if (searchInput) {
+            // Debounced search input
+            searchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                const query = e.target.value;
+
+                if (query.trim().length < 2) {
+                    searchDropdown.classList.add('hidden');
+                    return;
+                }
+
+                searchTimeout = setTimeout(() => {
+                    performSearch(query);
+                }, 300); // 300ms debounce
+            });
+
+            // Close dropdown on outside click
+            document.addEventListener('click', (e) => {
+                if (!searchInput.contains(e.target) && !searchDropdown.contains(e.target)) {
+                    searchDropdown.classList.add('hidden');
+                }
+            });
+
+            // Clear dropdown when input is cleared
+            searchInput.addEventListener('focus', (e) => {
+                if (e.target.value.trim().length >= 2) {
+                    performSearch(e.target.value);
+                }
+            });
+        }
+
         // Init
         loadProfile();
         loadPhotos();
