@@ -186,6 +186,23 @@
             </form>
         </div>
 
+        <!-- Education Section -->
+        <div class="glass-card rounded-2xl p-8 mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold flex items-center gap-2">
+                    <i class="fas fa-graduation-cap text-[#00b4d8]"></i> Education
+                </h2>
+                <button id="add-education-btn" class="btn-secondary text-sm">
+                    <i class="fas fa-plus"></i> Add Education
+                </button>
+            </div>
+
+            <!-- Education Entries List -->
+            <div id="education-list" class="space-y-4">
+                <!-- Education entries will be injected here via JS -->
+            </div>
+        </div>
+
         <!-- Gallery Section -->
         <div class="glass-card rounded-2xl p-8">
             <div class="flex justify-between items-center mb-6">
@@ -255,6 +272,44 @@
                 <button id="crop-save-btn" class="btn-primary flex-1">Crop & Save</button>
                 <button id="crop-cancel-btn" class="btn-secondary flex-1">Cancel</button>
             </div>
+        </div>
+    </div>
+
+    <!-- Education Modal -->
+    <div id="education-modal" class="modal hidden">
+        <div class="modal-panel">
+            <h3 class="text-xl font-bold mb-4" id="education-modal-title">Add Education</h3>
+            <form id="education-form" class="space-y-4">
+                <input type="hidden" id="education-id" value="">
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Organization/University/School *</label>
+                    <input type="text" id="education-org" class="input" placeholder="e.g. Harvard University" required>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-400 mb-1">Location</label>
+                    <input type="text" id="education-location" class="input" placeholder="e.g. Cambridge, MA">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">Start Year *</label>
+                        <input type="number" id="education-start-year" class="input" placeholder="e.g. 2018" min="1950"
+                            max="2100" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-400 mb-1">End Year</label>
+                        <input type="number" id="education-end-year" class="input"
+                            placeholder="e.g. 2022 (or leave empty for Present)" min="1950" max="2100">
+                    </div>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="submit" class="btn-primary flex-1">Save</button>
+                    <button type="button" id="education-cancel" class="btn-secondary flex-1">Cancel</button>
+                </div>
+            </form>
         </div>
     </div>
 

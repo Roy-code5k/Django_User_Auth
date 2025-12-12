@@ -60,6 +60,22 @@ class Profile(models.Model):
         }
         return PRONOUN_MAP.get(self.gender, '')
 
+class Education(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='education')
+    organization = models.CharField(max_length=200)
+    location = models.CharField(max_length=200, blank=True)
+    start_year = models.IntegerField()
+    end_year = models.IntegerField(null=True, blank=True)  # null means "Present"
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-start_year']  # Most recent first
+
+    def __str__(self):
+        end = self.end_year if self.end_year else "Present"
+        return f"{self.user.username} - {self.organization} ({self.start_year}-{end})"
+
 class UserPhoto(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='photos')
     image = models.ImageField(upload_to='gallery/')

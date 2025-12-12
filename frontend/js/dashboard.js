@@ -607,8 +607,167 @@ export function initDashboard() {
         setupSearchInput(searchInputMobile, searchDropdownMobile);
 
 
+        // -------------------------------------------------------------
+        // EDUCATION MANAGEMENT
+        // -------------------------------------------------------------
+        const educationList = document.getElementById('education-list');
+        const educationModal = document.getElementById('education-modal');
+        const educationForm = document.getElementById('education-form');
+        const educationIdInput = document.getElementById('education-id');
+        const educationOrgInput = document.getElementById('education-org');
+        const educationLocationInput = document.getElementById('education-location');
+        const educationStartYearInput = document.getElementById('education-start-year');
+        const educationEndYearInput = document.getElementById('education-end-year');
+        const educationModalTitle = document.getElementById('education-modal-title');
+
+        // Open Add Education Modal
+        document.getElementById('add-education-btn').addEventListener('click', () => {
+            educationForm.reset();
+            educationIdInput.value = '';
+            educationModalTitle.textContent = 'Add Education';
+            educationModal.classList.remove('hidden');
+        });
+
+        // Close Education Modal
+        document.getElementById('education-cancel').addEventListener('click', () => {
+            educationModal.classList.add('hidden');
+        });
+
+        // Load Education Entries
+        async function loadEducation() {
+            try {
+                const res = await authFetch('/api/education/');
+                if (res.ok) {
+                    const educations = await res.json();
+
+                    if (educations.length === 0) {
+                        educationList.innerHTML = `
+                            <div class="text-center py-8 text-gray-400">
+                                <i class="fas fa-graduation-cap text-4xl mb-3 opacity-50"></i>
+                                <p>No education entries yet. Click "Add Education" to add one.</p>
+                            </div>
+                        `;
+                        return;
+                    }
+
+                    educationList.innerHTML = educations.map(edu => `
+                        <div class="glass-card p-4 rounded-xl hover:bg-white/5 transition">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h3 class="font-bold text-lg text-white">${edu.organization}</h3>
+                                    ${edu.location ? `<p class="text-sm text-gray-400 mb-1"><i class="fas fa-map-marker-alt mr-1"></i>${edu.location}</p>` : ''}
+                                    <p class="text-sm text-cyan-400">
+                                        <i class="fas fa-calendar mr-1"></i>
+                                        ${edu.start_year} - ${edu.end_year || 'Present'}
+                                    </p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="editEducation(${edu.id})" class="text-blue-400 hover:text-blue-300 transition">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="deleteEducation(${edu.id})" class="text-red-400 hover:text-red-300 transition">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('Error loading education:', error);
+            }
+        }
+
+        // Save Education Entry (Create or Update)
+        educationForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const submitBtn = e.target.querySelector('button[type="submit"]');
+            setButtonLoading(submitBtn, true);
+
+            const payload = {
+                organization: educationOrgInput.value.trim(),
+                location: educationLocationInput.value.trim(),
+                start_year: parseInt(educationStartYearInput.value),
+                end_year: educationEndYearInput.value ? parseInt(educationEndYearInput.value) : null
+            };
+
+            const educationId = educationIdInput.value;
+            const method = educationId ? 'PUT' : 'POST';
+            const url = educationId ? `/api/education/${educationId}/` : '/api/education/';
+
+            try {
+                const res = await authFetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    educationModal.classList.add('hidden');
+                    loadEducation();
+                    showToast(`Education ${educationId ? 'updated' : 'added'} successfully!`, 'success');
+                } else {
+                    const data = await res.json();
+                    showToast(data.detail || 'Failed to save education', 'error');
+                }
+            } catch (error) {
+                console.error('Error saving education:', error);
+                showToast('An error occurred', 'error');
+            } finally {
+                setButtonLoading(submitBtn, false);
+            }
+        });
+
+        // Edit Education Entry (Global function for onclick)
+        window.editEducation = async (id) => {
+            try {
+                const res = await authFetch(`/api/education/${id}/`);
+                if (res.ok) {
+                    const edu = await res.json();
+
+                    educationIdInput.value = edu.id;
+                    educationOrgInput.value = edu.organization;
+                    educationLocationInput.value = edu.location || '';
+                    educationStartYearInput.value = edu.start_year;
+                    educationEndYearInput.value = edu.end_year || '';
+
+                    educationModalTitle.textContent = 'Edit Education';
+                    educationModal.classList.remove('hidden');
+                }
+            } catch (error) {
+                console.error('Error loading education:', error);
+                showToast('Failed to load education data', 'error');
+            }
+        };
+
+        // Delete Education Entry (Global function for onclick)
+        window.deleteEducation = async (id) => {
+            if (!confirm('Are you sure you want to delete this education entry?')) return;
+
+            try {
+                const res = await authFetch(`/api/education/${id}/`, {
+                    method: 'DELETE'
+                });
+
+                if (res.ok) {
+                    loadEducation();
+                    showToast('Education deleted successfully!', 'success');
+                } else {
+                    showToast('Failed to delete education', 'error');
+                }
+            } catch (error) {
+                console.error('Error deleting education:', error);
+                showToast('An error occurred', 'error');
+            }
+        };
+
+
         // Init
         loadProfile();
         loadPhotos();
+        loadEducation();
     }
 }

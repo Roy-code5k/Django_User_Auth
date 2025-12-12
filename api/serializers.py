@@ -14,7 +14,9 @@ from homepage.models import (
     CommunityMembership,
     Conversation,
     DirectMessage,
+    Education,
 )
+
 
 class ChatMessageSerializer(serializers.ModelSerializer):
     username = serializers.CharField(source='user.username', read_only=True)
@@ -145,7 +147,14 @@ class ProfileSerializer(serializers.ModelSerializer):
         model = Profile
         fields = ['username', 'email', 'title', 'description', 'avatar', 'instagram', 'linkedin', 'github', 'gmail', 'gender']
 
+class EducationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Education
+        fields = ['id', 'organization', 'location', 'start_year', 'end_year', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+
 class CommentSerializer(serializers.ModelSerializer):
+
     username = serializers.CharField(source='user.username', read_only=True)
     avatar = serializers.SerializerMethodField()
     parent_id = serializers.IntegerField(source='parent.id', read_only=True)

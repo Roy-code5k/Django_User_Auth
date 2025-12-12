@@ -99,8 +99,8 @@ def me_view(request):
 # -------------------------------------------------------------
 # PROFILE MANAGEMENT (GET / UPDATE)
 # -------------------------------------------------------------
-from homepage.models import Profile, UserPhoto
-from .serializers import ProfileSerializer, UserPhotoSerializer
+from homepage.models import Profile, UserPhoto, Education
+from .serializers import ProfileSerializer, UserPhotoSerializer, EducationSerializer
 
 class ProfileDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = ProfileSerializer
@@ -131,6 +131,36 @@ class UserPhotoDetailView(generics.DestroyAPIView):
     def get_queryset(self):
         # Ensure user can only delete their own photos
         return UserPhoto.objects.filter(user=self.request.user)
+
+# -------------------------------------------------------------
+# EDUCATION MANAGEMENT (LIST / CREATE / UPDATE / DELETE)
+# -------------------------------------------------------------
+class EducationListCreateView(generics.ListCreateAPIView):
+    """
+    GET /api/education/ -> List user's education entries
+    POST /api/education/ -> Add new education entry
+    """
+    serializer_class = EducationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        return Education.objects.filter(user=self.request.user).order_by('-start_year')
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+class EducationDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """
+    GET /api/education/<id>/ -> Get education entry
+    PUT /api/education/<id>/ -> Update education entry
+    DELETE /api/education/<id>/ -> Delete education entry
+    """
+    serializer_class = EducationSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        # Ensure user can only modify their own education entries
+        return Education.objects.filter(user=self.request.user)
 
 # -------------------------------------------------------------
 # LIKE FEATURE

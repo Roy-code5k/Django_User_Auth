@@ -3,6 +3,7 @@ from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from .views import (
     RegisterView, resolve_username, me_view, 
     ProfileDetailView, UserPhotoListCreateView, UserPhotoDetailView,
+    EducationListCreateView, EducationDetailView,
     toggle_like, PhotoCommentListView, PhotoCommentDetailView,
     google_auth,
     ChatListCreateView,
@@ -26,6 +27,10 @@ urlpatterns = [
     path('profile/', ProfileDetailView.as_view(), name='api-profile'),
     path('photos/', UserPhotoListCreateView.as_view(), name='api-photos-list'),
     path('photos/<int:pk>/', UserPhotoDetailView.as_view(), name='api-photos-detail'),
+
+    # Education
+    path('education/', EducationListCreateView.as_view(), name='api-education-list'),
+    path('education/<int:pk>/', EducationDetailView.as_view(), name='api-education-detail'),
 
     # JWT Login + Token Refresh
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
