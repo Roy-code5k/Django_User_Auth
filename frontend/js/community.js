@@ -1,11 +1,31 @@
 import { authFetch, showToast } from './utils.js';
 
+// WhatsApp-style emoji set for quick reactions
+const QUICK_EMOJIS = ['👍', '❤️', '😂', '😮', '😢', '🙏'];
+const ALL_EMOJIS = [
+    '😀', '😃', '😄', '😁', '😅', '😂', '🤣', '😊', '😇', '🙂',
+    '😉', '😌', '😍', '🥰', '😘', '😗', '😙', '😚', '😋', '😛',
+    '😝', '😜', '🤪', '🤨', '🧐', '🤓', '😎', '🥳', '😏', '😒',
+    '😞', '😔', '😟', '😕', '🙁', '😣', '😖', '😫', '😩', '🥺',
+    '😢', '😭', '😤', '😠', '😡', '🤬', '🤯', '😳', '🥵', '🥶',
+    '😱', '😨', '😰', '😥', '😓', '🤗', '🤔', '🤭', '🤫', '🤥',
+    '😶', '😐', '😑', '😬', '🙄', '😯', '😦', '😧', '😮', '😲',
+    '🥱', '😴', '🤤', '😪', '😵', '🤐', '🥴', '🤢', '🤮', '🤧',
+    '👍', '👎', '👏', '🙌', '👐', '🤝', '🙏', '✌️', '🤞', '🤟',
+    '🤘', '🤙', '👈', '👉', '👆', '👇', '☝️', '👌', '🤏', '👊',
+    '✊', '🤛', '🤜', '🤚', '👋', '🤟', '✋', '🖐', '🖖', '💪',
+    '❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔',
+    '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '🔥', '⭐',
+    '✨', '💫', '💥', '💯', '🎉', '🎊', '🎈', '🎁', '🏆', '🥇'
+];
+
 export function initCommunity() {
     if (!window.location.pathname.includes('/community/')) return;
 
     const messagesContainer = document.getElementById('chat-messages');
     const chatForm = document.getElementById('chat-form');
     const chatInput = document.getElementById('chat-input');
+    const emojiBtn = document.getElementById('chat-emoji-btn');
 
     const communitySelect = document.getElementById('community-select');
     const communityTitle = document.getElementById('community-title');
@@ -28,6 +48,8 @@ export function initCommunity() {
     const memberSearchResults = document.getElementById('member-search-results');
 
     let selectedCommunityId = null; // null => global
+    let isHoveringReactionMenu = false; // Track hover state to prevent re-render
+    let isAtBottom = true; // Track if user is scrolled to bottom
     let pollTimer = null;
     let searchTimer = null;
 
@@ -159,7 +181,87 @@ export function initCommunity() {
         renderMessages(messages);
     }
 
+    // =============================================
+    // MESSAGE REACTIONS
+    // =============================================
+    async function addReaction(messageId, emoji) {
+        const url = selectedCommunityId
+            ? `/api/communities/${selectedCommunityId}/chat/${messageId}/react/`
+            : `/api/chat/${messageId}/react/`;
+
+        const res = await authFetch(url, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emoji })
+        });
+
+        if (res.ok) {
+            await loadMessages();
+        }
+    }
+
+    async function removeReaction(messageId, emoji) {
+        const url = selectedCommunityId
+            ? `/api/communities/${selectedCommunityId}/chat/${messageId}/react/`
+            : `/api/chat/${messageId}/react/`;
+
+        const res = await authFetch(url, {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ emoji })
+        });
+
+        if (res.ok) {
+            await loadMessages();
+        }
+    }
+
+    // Show emoji picker popup
+    function showEmojiPicker() {
+        // Remove existing picker
+        document.getElementById('emoji-picker')?.remove();
+
+        const picker = document.createElement('div');
+        picker.id = 'emoji-picker';
+        picker.className = 'fixed bottom-24 left-6 z-50 glass-card rounded-2xl p-4 border border-white/10 shadow-2xl w-80 max-h-96 overflow-y-auto custom-scrollbar';
+        picker.innerHTML = `
+            <div class="grid grid-cols-8 gap-2">
+                ${ALL_EMOJIS.map(emoji => `
+                    <button class="emoji-btn text-2xl hover:scale-125 transition p-1" data-emoji="${emoji}">${emoji}</button>
+                `).join('')}
+            </div>
+        `;
+
+        document.body.appendChild(picker);
+
+        // Add click handlers for emoji selection
+        picker.querySelectorAll('.emoji-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const emoji = btn.getAttribute('data-emoji');
+                chatInput.value += emoji;
+                chatInput.focus();
+                picker.remove();
+            });
+        });
+
+        // Close on outside click
+        setTimeout(() => {
+            document.addEventListener('click', function closePicker(e) {
+                if (!picker.contains(e.target) && e.target !== emojiBtn) {
+                    picker.remove();
+                    document.removeEventListener('click', closePicker);
+                }
+            });
+        }, 100);
+    }
+
     function renderMessages(messages) {
+        // Don't re-render if user is hovering over reaction menu
+        if (isHoveringReactionMenu) {
+            return;
+        }
+
         messagesContainer.innerHTML = '';
 
         if (!messages || messages.length === 0) {
@@ -167,19 +269,34 @@ export function initCommunity() {
             return;
         }
 
-        messages.forEach(msg => {
+        messages.forEach((msg, index) => {
             const isMe = msg.is_me;
-            const div = document.createElement('div');
-            div.className = `flex gap-3 mb-4 ${isMe ? 'flex-row-reverse' : 'flex-row'}`;
+            const prevMsg = messages[index - 1];
+            const nextMsg = messages[index + 1];
 
-            const avatarHtml = `
+            // Check if this message should be grouped with previous
+            const isGrouped = prevMsg &&
+                prevMsg.username === msg.username &&
+                (new Date(msg.created_at) - new Date(prevMsg.created_at)) < 60000; // within 1 min
+
+            // Check if next message will be grouped (to determine if we should show timestamp)
+            const nextIsGrouped = nextMsg &&
+                nextMsg.username === msg.username &&
+                (new Date(nextMsg.created_at) - new Date(msg.created_at)) < 60000;
+
+            const div = document.createElement('div');
+            div.className = `flex gap-3 ${isGrouped ? 'mb-1' : 'mb-4'} ${isMe ? 'flex-row-reverse' : 'flex-row'} group`;
+
+            // Avatar - only show if not grouped or if last in file
+            const showAvatar = !isGrouped;
+            const avatarHtml = showAvatar ? `
                 <div class="w-8 h-8 rounded-full bg-gray-700 overflow-hidden border border-white/20 shrink-0 mt-1">
                     ${msg.avatar
-                        ? `<img src="${msg.avatar}" class="w-full h-full object-cover">`
-                        : `<div class="w-full h-full bg-purple-500 flex items-center justify-center text-[10px] font-bold">${msg.username[0].toUpperCase()}</div>`
-                    }
+                    ? `<img src="${msg.avatar}" class="w-full h-full object-cover">`
+                    : `<div class="w-full h-full bg-purple-500 flex items-center justify-center text-[10px] font-bold">${msg.username[0].toUpperCase()}</div>`
+                }
                 </div>
-            `;
+            ` : '<div class="w-8 h-8 shrink-0"></div>'; // Placeholder for alignment
 
             const bubbleClass = isMe
                 ? 'bg-gradient-to-br from-blue-600 to-blue-700 text-white rounded-l-2xl rounded-tr-2xl'
@@ -189,26 +306,97 @@ export function initCommunity() {
                 ? `<button class="delete-msg-btn text-xs text-red-400 hover:text-red-300 ml-2 opacity-50 hover:opacity-100 transition" data-id="${msg.id}"><i class="fas fa-trash"></i></button>`
                 : '';
 
+            // Quick reactions menu (WhatsApp style)
+            const quickReactions = `
+                <div class="quick-reaction-menu absolute -top-8 ${isMe ? 'right-0' : 'left-0'} bg-gray-800/95 backdrop-blur-md rounded-full px-2 py-1 hidden group-hover:flex items-center gap-1 shadow-lg border border-white/10 z-10">
+                    ${QUICK_EMOJIS.map(emoji => `
+                        <button class="quick-react-btn text-lg hover:scale-125 transition" data-msg-id="${msg.id}" data-emoji="${emoji}">${emoji}</button>
+                    `).join('')}
+                </div>
+            `;
+
+            // Render existing reactions
+            const reactionsHtml = msg.reactions && msg.reactions.length > 0 ? `
+                <div class="flex flex-wrap gap-1 mt-1">
+                    ${msg.reactions.map(r => {
+                const hasUserReacted = r.users.some(u => u.is_me);
+                return `
+                            <button class="reaction-bubble px-2 py-0.5 rounded-full text-xs flex items-center gap-1 transition
+                                ${hasUserReacted ? 'bg-cyan-500/30 border border-cyan-400/50' : 'bg-white/10 border border-white/20'}
+                                hover:scale-105" 
+                                data-msg-id="${msg.id}" data-emoji="${r.emoji}">
+                                <span>${r.emoji}</span>
+                                <span class="font-bold">${r.count}</span>
+                            </button>
+                        `;
+            }).join('')}
+                </div>
+            ` : '';
+
             div.innerHTML = `
                 ${avatarHtml}
-                <div class="flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'}">
-                    <div class="flex items-center gap-2 mb-1 px-1">
-                        <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">${msg.username}</span>
-                        ${deleteBtn}
-                    </div>
+                <div class="flex flex-col max-w-[70%] ${isMe ? 'items-end' : 'items-start'} relative">
+                    ${quickReactions}
+                    ${!isGrouped ? `
+                        <div class="flex items-center gap-2 mb-1 px-1">
+                            <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide">${msg.username}</span>
+                            ${deleteBtn}
+                        </div>
+                    ` : ''}
                     <div class="${bubbleClass} px-4 py-2 shadow-sm break-words text-sm leading-relaxed">${msg.text}</div>
-                    <span class="text-[9px] text-gray-500 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    ${!nextIsGrouped ? `<span class="text-[9px] text-gray-500 mt-1 px-1">${new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>` : ''}
+                    ${reactionsHtml}
                 </div>
             `;
 
             messagesContainer.appendChild(div);
         });
 
+        // Track hover state on reaction menus
+        messagesContainer.querySelectorAll('.quick-reaction-menu').forEach(menu => {
+            menu.addEventListener('mouseenter', () => {
+                isHoveringReactionMenu = true;
+            });
+            menu.addEventListener('mouseleave', () => {
+                isHoveringReactionMenu = false;
+            });
+        });
+
+        // Add event listeners for quick reactions
+        messagesContainer.querySelectorAll('.quick-react-btn').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const msgId = btn.getAttribute('data-msg-id');
+                const emoji = btn.getAttribute('data-emoji');
+                await addReaction(msgId, emoji);
+            });
+        });
+
+        // Add event listeners for reaction bubbles (click to toggle)
+        messagesContainer.querySelectorAll('.reaction-bubble').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const msgId = btn.getAttribute('data-msg-id');
+                const emoji = btn.getAttribute('data-emoji');
+                const reaction = messages.find(m => m.id == msgId)?.reactions.find(r => r.emoji === emoji);
+                const hasUserReacted = reaction?.users.some(u => u.is_me);
+
+                if (hasUserReacted) {
+                    await removeReaction(msgId, emoji);
+                } else {
+                    await addReaction(msgId, emoji);
+                }
+            });
+        });
+
         document.querySelectorAll('.delete-msg-btn').forEach(btn => {
             btn.addEventListener('click', deleteMessage);
         });
 
-        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        // Only auto-scroll if user was already at bottom
+        if (isAtBottom) {
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
     }
 
     async function deleteMessage(e) {
@@ -238,6 +426,12 @@ export function initCommunity() {
         } else if (res.status === 403) {
             showToast('You are not allowed to post in this community.', 'error');
         }
+    });
+
+    // Emoji picker button
+    emojiBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        showEmojiPicker();
     });
 
     communitySelect.addEventListener('change', async (e) => {
@@ -365,6 +559,13 @@ export function initCommunity() {
         if (!memberSearchResults.contains(e.target) && !memberSearchInput.contains(e.target)) {
             memberSearchResults.classList.add('hidden');
         }
+    });
+
+    // Track scroll position for smart auto-scroll
+    messagesContainer.addEventListener('scroll', () => {
+        const threshold = 100; // pixels from bottom
+        const scrollBottom = messagesContainer.scrollHeight - messagesContainer.scrollTop - messagesContainer.clientHeight;
+        isAtBottom = scrollBottom < threshold;
     });
 
     async function startPolling() {

@@ -16,6 +16,8 @@ from .views import (
     DirectMessageListCreateView,
     DirectMessageDetailView,
     message_reaction_view,
+    chat_reaction_view,
+    community_chat_reaction_view,
 )
 
 urlpatterns = [
@@ -42,12 +44,14 @@ urlpatterns = [
     # Global Chat
     path('chat/', ChatListCreateView.as_view(), name='api-chat-list'),
     path('chat/<int:pk>/', ChatDetailView.as_view(), name='api-chat-detail'),
+    path('chat/<int:message_id>/react/', chat_reaction_view, name='api-chat-react'),
 
     # Private Communities
     path('communities/', CommunityListCreateView.as_view(), name='api-community-list'),
     path('communities/<int:community_id>/members/', CommunityMembersView.as_view(), name='api-community-members'),
     path('communities/<int:community_id>/chat/', CommunityChatListCreateView.as_view(), name='api-community-chat-list'),
     path('communities/<int:community_id>/chat/<int:pk>/', CommunityChatDetailView.as_view(), name='api-community-chat-detail'),
+    path('communities/<int:community_id>/chat/<int:message_id>/react/', community_chat_reaction_view, name='api-community-chat-react'),
 
     # Direct Messages (1:1)
     path('dm/threads/', DirectThreadListCreateView.as_view(), name='api-dm-threads'),

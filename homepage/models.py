@@ -210,3 +210,18 @@ class MessageReaction(models.Model):
     
     def __str__(self):
         return f"{self.user.username} {self.emoji} on DM {self.message_id}"
+
+
+class CommunityMessageReaction(models.Model):
+    """Emoji reactions on community/global chat messages"""
+    message = models.ForeignKey(ChatMessage, on_delete=models.CASCADE, related_name='reactions')
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='chat_reactions')
+    emoji = models.CharField(max_length=10)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        unique_together = [['message', 'user']]  # One reaction per user per message
+        ordering = ['created_at']
+    
+    def __str__(self):
+        return f"{self.user.username} {self.emoji} on Chat {self.message_id}"
