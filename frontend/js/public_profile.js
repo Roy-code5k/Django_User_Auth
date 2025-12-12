@@ -318,10 +318,14 @@ export function initPublicProfile() {
                     loadPhotoData(photoId, false); // Initial Load
 
                     // Start Polling
-                    if (pollingInterval) clearInterval(pollingInterval);
                     pollingInterval = setInterval(() => {
-                        // Check if still open
-                        if (currentPhotoId && !document.getElementById('lightbox-modal').classList.contains('hidden')) {
+                        // Check if still open and visible
+                        const isOpen = currentPhotoId && !document.getElementById('lightbox-modal').classList.contains('hidden');
+
+                        // Check if user is interacting (replying or typing)
+                        const isInteracting = replyingToId !== null || (commentInput && commentInput.value.trim().length > 0);
+
+                        if (isOpen && !isInteracting) {
                             loadPhotoData(currentPhotoId, true);
                         }
                     }, 3000);
