@@ -135,6 +135,12 @@ class DirectMessageSerializer(serializers.ModelSerializer):
         model = DirectMessage
         fields = ['id', 'text', 'username', 'avatar', 'created_at', 'is_me', 'reactions']
         read_only_fields = ['id', 'username', 'avatar', 'created_at', 'is_me', 'reactions']
+    
+    def to_representation(self, instance):
+        """Override to decrypt text when reading."""
+        data = super().to_representation(instance)
+        data['text'] = instance.get_decrypted_text()
+        return data
 
     def get_avatar(self, obj):
         if hasattr(obj.sender, 'profile') and obj.sender.profile.avatar:
@@ -216,7 +222,7 @@ class DirectThreadSerializer(serializers.ModelSerializer):
         if not last:
             return None
         return {
-            'text': last.text,
+            'text': last.get_decrypted_text(),
             'created_at': last.created_at,
             'username': last.sender.username,
         }

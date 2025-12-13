@@ -24,7 +24,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 # Quick-start development settings
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-this-in-production') 
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'dev-secret-key-change-this-in-production')
+
+# Message encryption key for DirectMessage encryption
+MESSAGE_ENCRYPTION_KEY = os.environ.get('MESSAGE_ENCRYPTION_KEY') 
 
 # SECURITY WARNING: don't run with debug turned on in production!
 # Render sets 'RENDER' env var to 'true'

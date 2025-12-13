@@ -245,14 +245,33 @@ class Conversation(models.Model):
 class DirectMessage(models.Model):
     conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='dm_messages_sent')
-    text = models.TextField()
+    text = models.TextField()  # Stores encrypted data
     created_at = models.DateTimeField(auto_now_add=True)
     is_read = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
+        """Override save to encrypt message text before storing."""
+        # Encrypt message if not already encrypted
+        if self.text and not self._is_encrypted(self.text):
+            from .encryption import MessageEncryption
+            self.text = MessageEncryption.encrypt(self.text)
+        
         super().save(*args, **kwargs)
-        # Keep conversation ordering fresh for inbox sorting.
+        
+        # Keep conversation ordering fresh for inbox sorting
         Conversation.objects.filter(pk=self.conversation_id).update(updated_at=timezone.now())
+    
+    def _is_encrypted(self, text):
+        """
+        Check if text is already encrypted.
+        Fernet encrypted strings start with 'gAAAAA' prefix.
+        """
+        return text.startswith('gAAAAA')
+    
+    def get_decrypted_text(self):
+        """Get the decrypted message text."""
+        from .encryption import MessageEncryption
+        return MessageEncryption.decrypt(self.text)
 
     def __str__(self):
         return f"[DM {self.conversation_id}] {self.sender.username}: {self.text[:20]}"
