@@ -27,18 +27,27 @@ def get_call_token(request, thread_id):
     channel_name = f"dm_{thread.id}"
     
     # 3. Generate Token
+    # 3. Generate Token
     try:
+        app_id = os.environ.get('AGORA_APP_ID')
+        app_cert = os.environ.get('AGORA_APP_CERTIFICATE')
+
+        if not app_id or not app_cert:
+            print(f"CRITICAL ERROR: Agora keys missing. APP_ID={app_id}, CERT={app_cert}")
+            raise Exception("Agora configuration missing on server")
+
         # UID=0 allows Agora to auto-assign a user ID
         token = generate_agora_token(channel_name, uid=0)
         
         return Response({
             'token': token,
-            'appId': os.environ.get('AGORA_APP_ID'),
+            'appId': app_id,
             'channelName': channel_name,
             'uid': 0
         })
     except Exception as e:
+        print(f"AGORA TOKEN ERROR: {str(e)}")
         return Response(
-            {"detail": str(e)}, 
+            {"detail": f"Server Error: {str(e)}"}, 
             status=status.HTTP_500_INTERNAL_SERVER_ERROR
         )
