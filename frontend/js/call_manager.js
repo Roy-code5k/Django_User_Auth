@@ -23,6 +23,7 @@ export class CallManager {
         this.localContainer = document.getElementById('video-local-container');
         this.remoteContainer = document.getElementById('video-remote-container');
         this.statusEl = document.getElementById('call-status');
+        this.statusMobileTextEl = document.getElementById('call-status-text-mobile');
 
         // Buttons
         this.btnMic = document.getElementById('btn-toggle-mic');
@@ -127,18 +128,27 @@ export class CallManager {
         }
     }
 
-    handleUserUnpublished(user) {
-        const playerContainer = document.getElementById(user.uid.toString());
-        if (playerContainer) playerContainer.remove();
+    handleUserUnpublished(user, mediaType) {
+        console.log(`User ${user.uid} unpublished ${mediaType}`);
 
-        // If no remote users, show waiting message
-        if (this.remoteContainer.childElementCount === 0) {
-            this.remoteContainer.innerHTML = `
-                <div class="flex items-center justify-center h-full text-gray-500">
-                    <p>User disable camera.</p>
-                </div>
-           `;
+        if (mediaType === 'video') {
+            const playerContainer = document.getElementById(user.uid.toString());
+            if (playerContainer) playerContainer.remove();
+
+            // If no remote users have video, check if they are still in call (via audio) or show placeholder
+            // Using a specific ID for the placeholder to avoid duplicates
+            if (this.remoteContainer.querySelectorAll('[id]').length === 0) {
+                this.remoteContainer.innerHTML = `
+                    <div class="flex items-center justify-center h-full text-gray-500 bg-gray-900">
+                         <div class="text-center">
+                            <i class="fas fa-video-slash text-5xl mb-2 opacity-50"></i>
+                            <p>Remote user camera off</p>
+                        </div>
+                    </div>
+               `;
+            }
         }
+        // If audio is unpublished, we don't need to remove the video container
     }
 
     async handleUserLeft(user) {
@@ -197,6 +207,7 @@ export class CallManager {
     }
 
     updateStatus(text) {
-        this.statusEl.innerText = text;
+        if (this.statusEl) this.statusEl.textContent = text;
+        if (this.statusMobileTextEl) this.statusMobileTextEl.textContent = text;
     }
 }
